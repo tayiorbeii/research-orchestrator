@@ -28,7 +28,7 @@ source (`src/cli.ts`, `package.json`, `bridges/`).
 
 **Optional**, only for live modes:
 - An **Octocode MCP server** reachable via stdio / SSE / HTTP (for `--mode octocode`).
-- A **GitHub token** with public-repo read (for `--mode github`, currently a stub).
+- GitHub authentication via `gh auth login` or `GITHUB_TOKEN`/`GH_TOKEN` (for live GitHub/Octocode modes).
 
 ---
 
@@ -131,7 +131,7 @@ npx tsx src/cli.ts            # no args also prints help (exits 1)
 | --- | --- | --- | --- |
 | **`mock`** (default) | ❌ none | none | Deterministic `MockEvidenceProvider`. Identical output every run. **Start here.** |
 | **`octocode`** | ✅ live | env vars (see §7) | Real `OctocodeEvidenceProvider` over the live bridge. Searches/proves against public repos. |
-| **`github`** | ✅ live | `GITHUB_TOKEN` | `GitHubEvidenceProvider` (REST stub). |
+| **`github`** | ✅ live | `gh auth login` or `GITHUB_TOKEN`/`GH_TOKEN` | Built-in GitHub REST provider. |
 
 Mock mode is the only mode that works with zero configuration. Use it to verify
 your install, iterate on prompts/templates, and run the test suite.
@@ -545,7 +545,7 @@ setOctocodeToolCaller(async (name, args) => myClient.call(name, args));
 `_DEBUG`.
 
 **Other:**
-- `GITHUB_TOKEN` — for `--mode github` (GitHub REST provider).
+- `GITHUB_TOKEN` / `GH_TOKEN`, or `gh auth login` — for live GitHub/Octocode authentication. The stdio bridge forwards the CLI token to Octocode as `GH_TOKEN`.
 
 Load a `.env` file into your shell before running:
 ```bash

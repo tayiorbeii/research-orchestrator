@@ -53,6 +53,7 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
+import { execFileSync } from "node:child_process";
 
 /**
  * Signature the orchestrator's adapter expects. Re-declared locally so the
@@ -72,6 +73,8 @@ export interface OctocodeBridgeConfig {
   command?: string;
   args: string[];
   cwd?: string;
+  /** GitHub CLI credential forwarded to the Octocode stdio process. */
+  githubToken?: string;
   /** sse / http */
   url?: string;
   apiKey?: string;
@@ -116,6 +119,7 @@ export function readBridgeConfig(env: NodeJS.ProcessEnv = process.env): Octocode
     command: env.RESEARCH_OCTOCODE_COMMAND,
     args,
     cwd: env.RESEARCH_OCTOCODE_CWD,
+    githubToken: env.GITHUB_TOKEN?.trim() || env.GH_TOKEN?.trim(),
     url,
     apiKey: apiKey && apiKey.trim() !== "" ? apiKey : undefined,
     maxRetries: parseIntish(env.RESEARCH_OCTOCODE_MAX_RETRIES, DEFAULTS.maxRetries),
@@ -130,7 +134,10 @@ export function readBridgeConfig(env: NodeJS.ProcessEnv = process.env): Octocode
 }
 
 /** Build a fresh transport from resolved config. */
-export function createTransport(config: OctocodeBridgeConfig): Transport {
+export function createTransport(
+  config: OctocodeBridgeConfig,
+  env: NodeJS.ProcessEnv = process.env,
+): Transport {
   switch (config.transport) {
     case "stdio": {
       if (!config.command) {
@@ -138,13 +145,17 @@ export function createTransport(config: OctocodeBridgeConfig): Transport {
           "stdio transport requires RESEARCH_OCTOCODE_COMMAND (the executable to spawn).",
         );
       }
-      // `env` is intentionally omitted: StdioClientTransport then uses the
-      // SDK's getDefaultEnvironment(), which inherits the parent process env
-      // (incl. any tokens the Octocode subprocess needs) safely.
+      const token = config.githubToken ?? getGhCliToken(env);
+      if (!token) {
+        throw new ConfigError(
+          "Octocode stdio requires GitHub authentication. Run `gh auth login` or set GITHUB_TOKEN/GH_TOKEN.",
+        );
+      }
       return new StdioClientTransport({
         command: config.command,
         args: config.args,
         cwd: config.cwd,
+        env: { ...env, GH_TOKEN: token },
         stderr: "pipe",
       });
     }
@@ -185,7 +196,19 @@ export function createTransport(config: OctocodeBridgeConfig): Transport {
 export function createOctocodeToolCaller(
   options: CreateOctocodeToolCallerOptions = {},
 ): OctocodeToolCaller {
-  const config: OctocodeBridgeConfig = { ...readBridgeConfig(options.env), ...options.config };
+  const env = options.env ?? process.env;
+  const config: OctocodeBridgeConfig = { ...readBridgeConfig(env), ...options.config };
+  if (!options.transport && config.transport === "stdio") {
+    if (!config.command) {
+      throw new ConfigError("stdio transport requires RESEARCH_OCTOCODE_COMMAND (the executable to spawn).");
+    }
+    config.githubToken ??= getGhCliToken(env);
+    if (!config.githubToken) {
+      throw new ConfigError(
+        "Octocode stdio requires GitHub authentication. Run `gh auth login` or set GITHUB_TOKEN/GH_TOKEN.",
+      );
+    }
+  }
   const injectedTransport = options.transport;
 
   // Mutable client state, closed over by the returned caller.
@@ -201,7 +224,7 @@ export function createOctocodeToolCaller(
     // Serialize concurrent first-call races onto a single connect attempt.
     if (connecting) return connecting;
     connecting = (async () => {
-      const transport = injectedTransport ?? createTransport(config);
+      const transport = injectedTransport ?? createTransport(config, env);
       activeTransport = transport;
       const next = new Client({ name: config.clientName, version: "0.1.0" });
       // Surface transport errors through the client's close path so the next
@@ -445,6 +468,20 @@ function toUrl(raw: string): URL {
     return new URL(raw);
   } catch {
     throw new ConfigError(`RESEARCH_OCTOCODE_URL="${raw}" is not a valid URL.`);
+  }
+}
+
+function getGhCliToken(env: NodeJS.ProcessEnv): string | undefined {
+  try {
+    const token = execFileSync("gh", ["auth", "token"], {
+      encoding: "utf8",
+      env,
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 5_000,
+    }).trim();
+    return token || undefined;
+  } catch {
+    return undefined;
   }
 }
 

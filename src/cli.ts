@@ -6,7 +6,7 @@ import { GitHubEvidenceProvider } from "./adapters/GitHubEvidenceProvider.js";
 import { resolveOctocodeProvider } from "./adapters/bridge.js";
 import type { EvidenceProvider } from "./adapters/EvidenceProvider.js";
 import { FileResearchCache } from "./cache/FileResearchCache.js";
-import { ResearchError } from "./core/errors.js";
+import { providerNotConfigured, ResearchError } from "./core/errors.js";
 import { runEval } from "./eval/runEval.js";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
@@ -73,7 +73,7 @@ environment:
   (the kit's own .env is auto-loaded from the kit root; explicit env vars win)
   RESEARCH_OCTOCODE_BRIDGE   Module exporting an OctocodeToolCaller; enables --mode octocode
   RESEARCH_DEEPWIKI_BRIDGE   Module exporting askQuestion(repo, question); enables DeepWiki enrichment
-  GITHUB_TOKEN               Low-scope token; enables --mode github
+  GITHUB_TOKEN/GH_TOKEN      Or gh auth login; enables live GitHub providers
 
 Examples:
   research-orchestrator find \\
@@ -229,8 +229,16 @@ async function resolveCliProvider(mode: string): Promise<EvidenceProvider> {
       // Wired via setOctocodeToolCaller() or RESEARCH_OCTOCODE_BRIDGE; fails
       // fast with a structured provider_not_configured error otherwise.
       return resolveOctocodeProvider({ requireConfigured: true });
-    case "github":
-      return new GitHubEvidenceProvider();
+    case "github": {
+      const provider = new GitHubEvidenceProvider();
+      if (!provider.configured) {
+        throw providerNotConfigured(
+          "GitHub",
+          "Run `gh auth login` or set GITHUB_TOKEN/GH_TOKEN, then retry.",
+        );
+      }
+      return provider;
+    }
     default:
       fail(`unknown --mode '${mode}' (expected mock | octocode | github)`);
   }

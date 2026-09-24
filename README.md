@@ -42,8 +42,8 @@ npm install -g research-orchestrator   # or: npx research-orchestrator
 | Mode | Needs |
 | --- | --- |
 | `mock` (default) | Nothing — offline, deterministic |
-| `octocode` (live GitHub evidence) | Bridge env vars (below) |
-| `github` (built-in REST provider) | `GITHUB_TOKEN` (low-scope token) |
+| `octocode` (live GitHub evidence) | Bridge env vars (below) + `gh auth login` or `GITHUB_TOKEN`/`GH_TOKEN` |
+| `github` (built-in REST provider) | `gh auth login` or `GITHUB_TOKEN`/`GH_TOKEN` |
 
 For `--mode octocode`, copy `.env.example` → `.env` and set the bridge config:
 
@@ -63,6 +63,11 @@ For `--mode octocode`, copy `.env.example` → `.env` and set the bridge config:
 - **SSE/HTTP transport** (Octocode server already running elsewhere):
   `RESEARCH_OCTOCODE_TRANSPORT=sse` + `RESEARCH_OCTOCODE_URL` +
   `RESEARCH_OCTOCODE_API_KEY` instead of the stdio vars.
+
+For stdio, the bridge forwards the token from `gh auth token` to Octocode as
+`GH_TOKEN` when no token environment variable is set. Both live providers check
+authentication before starting research and return a configuration error if it
+is unavailable.
 
 Full variable reference: [`.env.example`](.env.example) and
 [`docs/RUNBOOK.md`](docs/RUNBOOK.md) §7.

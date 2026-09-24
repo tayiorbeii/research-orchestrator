@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import type {
   EvidenceProvider,
   FileEvidence,
@@ -17,10 +18,12 @@ export interface GitHubEvidenceProviderConfig {
   baseUrl?: string;
   /** Injectable fetch for tests. */
   fetchImpl?: typeof fetch;
+  /** Injectable gh token lookup for tests; defaults to `gh auth token`. */
+  getGhToken?: () => string | undefined;
 }
 
 const NOT_CONFIGURED_HINT =
-  "Set GITHUB_TOKEN (or pass { token }) with a low-scope personal access token, or run with --mock.";
+  "Run `gh auth login` or set GITHUB_TOKEN/GH_TOKEN, then retry; alternatively pass { token } or use --mock.";
 
 /**
  * Direct GitHub REST provider — a fallback evidence engine when Octocode is
@@ -34,7 +37,11 @@ export class GitHubEvidenceProvider implements EvidenceProvider {
   private readonly fetchImpl: typeof fetch;
 
   constructor(config: GitHubEvidenceProviderConfig = {}) {
-    this.token = config.token ?? process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+    this.token =
+      config.token?.trim() ||
+      process.env.GITHUB_TOKEN?.trim() ||
+      process.env.GH_TOKEN?.trim() ||
+      (config.getGhToken ?? getGhCliToken)();
     this.baseUrl = config.baseUrl ?? "https://api.github.com";
     this.fetchImpl = config.fetchImpl ?? fetch;
   }
@@ -156,6 +163,19 @@ export class GitHubEvidenceProvider implements EvidenceProvider {
 }
 
 /** Convert probe syntax ("a" "b" path:foo) to GitHub code-search qualifiers. */
+function getGhCliToken(): string | undefined {
+  try {
+    const token = execFileSync("gh", ["auth", "token"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 5_000,
+    }).trim();
+    return token || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function toGitHubQuery(query: string): string {
   return query
     .replace(/path:(\S+)/g, "path:$1")

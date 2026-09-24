@@ -43,7 +43,7 @@ export async function resolveProvider(mode: string | undefined): Promise<Evidenc
       if (!provider.configured) {
         throw providerNotConfigured(
           "GitHub",
-          "Set GITHUB_TOKEN with a low-scope token, or use mode:'mock'.",
+          "Run `gh auth login` or set GITHUB_TOKEN/GH_TOKEN, or use mode:'mock'.",
         );
       }
       return provider;

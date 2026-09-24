@@ -75,6 +75,32 @@ describe("readBridgeConfig", () => {
     ).toThrow(/invalid/);
   });
 
+  it("fails at setup time when stdio command is missing", () => {
+    expect(() => createOctocodeToolCaller({ env: { PATH: "" } })).toThrow(
+      /RESEARCH_OCTOCODE_COMMAND/,
+    );
+  });
+
+  it("fails at setup time when neither gh auth nor a token is available", () => {
+    expect(() =>
+      createOctocodeToolCaller({
+        env: { PATH: "", RESEARCH_OCTOCODE_COMMAND: "octocode" },
+      }),
+    ).toThrow(/gh auth login|GITHUB_TOKEN\/GH_TOKEN/);
+  });
+
+  it("accepts a GitHub CLI token for the Octocode stdio subprocess", () => {
+    expect(() =>
+      createOctocodeToolCaller({
+        env: {
+          PATH: "",
+          GH_TOKEN: "gh-cli-token",
+          RESEARCH_OCTOCODE_COMMAND: "octocode",
+        },
+      }),
+    ).not.toThrow();
+  });
+
   it("rejects a malformed URL eagerly is NOT required (deferred to transport) — but bad timeout is", () => {
     expect(() => readBridgeConfig({ RESEARCH_OCTOCODE_TIMEOUT_MS: "0" })).toThrow(/TIMEOUT_MS/);
     expect(() => readBridgeConfig({ RESEARCH_OCTOCODE_MAX_RETRIES: "-1" })).toThrow(/MAX_RETRIES/);
@@ -203,10 +229,9 @@ describe("module export shapes", () => {
     expect(typeof mod.createOctocodeToolCaller).toBe("function");
   });
 
-  it("createOctocodeToolCaller returns an OctocodeToolCaller", () => {
-    const caller = createOctocodeToolCaller({
-      env: {}, // no real server; caller only built, not invoked
-    });
+  it("createOctocodeToolCaller returns an OctocodeToolCaller with an injected transport", () => {
+    const [transport] = InMemoryTransport.createLinkedPair();
+    const caller = createOctocodeToolCaller({ transport, env: {} });
     expect(typeof caller).toBe("function");
   });
 });

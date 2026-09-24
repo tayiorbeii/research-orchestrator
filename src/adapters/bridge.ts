@@ -152,10 +152,19 @@ export interface ResolveOctocodeProviderOptions {
 export async function resolveOctocodeProvider(
   options: ResolveOctocodeProviderOptions = {},
 ): Promise<OctocodeEvidenceProvider> {
-  const callTool =
-    options.callTool ??
-    registeredOctocodeCaller ??
-    (await loadOctocodeToolCallerFromEnv(options.env));
+  let callTool: OctocodeToolCaller | undefined;
+  try {
+    callTool =
+      options.callTool ??
+      registeredOctocodeCaller ??
+      (await loadOctocodeToolCallerFromEnv(options.env));
+  } catch (error) {
+    if (error instanceof ResearchError) throw error;
+    throw providerNotConfigured(
+      "Octocode",
+      `${OCTOCODE_WIRING_HINT} Bridge setup failed: ${(error as Error).message}`,
+    );
+  }
   const provider = new OctocodeEvidenceProvider({
     callTool,
     maxResultsPerProbe: options.maxResultsPerProbe,
