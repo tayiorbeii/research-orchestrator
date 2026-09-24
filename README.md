@@ -27,8 +27,45 @@ becomes a repeatable workflow that:
 npm install -g research-orchestrator   # or: npx research-orchestrator
 ```
 
-Requires Node 20+. Zero configuration for offline mock mode; set Octocode env
-for live GitHub evidence (see below).
+### Requirements
+
+- **Node 20+** (enforced via `engines`; the Octocode server also needs 20+)
+- **npx** available for live `--mode octocode` (bundled with npm — it spawns
+  `@octocodeai/mcp` as a subprocess; first call downloads the package)
+- Network access to GitHub for live modes; **no config, no network for
+  `--mode mock`**
+- No native modules, no postinstall scripts — runtime deps are just
+  `@modelcontextprotocol/sdk` and `zod`
+
+### Per-mode configuration
+
+| Mode | Needs |
+| --- | --- |
+| `mock` (default) | Nothing — offline, deterministic |
+| `octocode` (live GitHub evidence) | Bridge env vars (below) |
+| `github` (built-in REST provider) | `GITHUB_TOKEN` (low-scope token) |
+
+For `--mode octocode`, copy `.env.example` → `.env` and set the bridge config:
+
+- **Local clone:** put `.env` at the package root (next to `package.json`) —
+  the CLI self-loads it from its install location regardless of your cwd.
+- **Global install:** either export the variables directly (they always win):
+
+  ```bash
+  export RESEARCH_OCTOCODE_BRIDGE="$(npm root -g)/research-orchestrator/dist/bridges/octocode-mcp.js"
+  export RESEARCH_OCTOCODE_COMMAND=npx
+  export RESEARCH_OCTOCODE_ARGS='["-y","@octocodeai/mcp@latest"]'
+  ```
+
+  …or place the `.env` at the installed package root
+  (`$(npm root -g)/research-orchestrator/.env`).
+
+- **SSE/HTTP transport** (Octocode server already running elsewhere):
+  `RESEARCH_OCTOCODE_TRANSPORT=sse` + `RESEARCH_OCTOCODE_URL` +
+  `RESEARCH_OCTOCODE_API_KEY` instead of the stdio vars.
+
+Full variable reference: [`.env.example`](.env.example) and
+[`docs/RUNBOOK.md`](docs/RUNBOOK.md) §7.
 
 ## Quickstart
 
