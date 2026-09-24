@@ -96,6 +96,28 @@ Start with a TypeScript/Node project exposing:
 
 Do **not** rebuild Octocode primitives first. Treat Octocode as the evidence engine and build the orchestration/scoring/artifact layer on top.
 
+## Acknowledgments
+
+Research Orchestrator stands on the shoulders of:
+
+- **[Octocode](https://github.com/bgauryy/octocode)** — the evidence engine
+  this tool is built around, and the project that shaped its architecture.
+  Studying Octocode's thin-interface/engine-split design and performance
+  characteristics drove the core decision: layer orchestration, scoring, and
+  artifact generation on top of a long-lived evidence provider — never
+  re-implement code search. Design notes in
+  [`docs/SOURCE_NOTES.md`](docs/SOURCE_NOTES.md).
+- **[DeepWiki](https://deepwiki.com/)** — optional repo-explanation
+  enrichment. Useful when a repo wiki is indexed and fresh; never treated as
+  proof — critical claims are always verified against exact source.
+- **[Model Context Protocol](https://modelcontextprotocol.io/)** — the MCP
+  server (`research.scoreRepos`, `research.explainRepoPattern`,
+  `research.writePlanArtifact`) is built on the official MCP TypeScript SDK.
+- **[GitHub code search](https://docs.github.com/en/search-github/github-code-search/understanding-github-code-search-syntax)** —
+  its practical limits (result caps, rate limits, snippets-aren't-proof)
+  directly informed probe sharding, result caching, and the proof-grade
+  evidence-anchor model.
+
 ## License
 
 [MIT](LICENSE)
