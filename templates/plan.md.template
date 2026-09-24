@@ -1,0 +1,37 @@
+# Plan: {{feature}}
+
+## Objective
+
+{{objective}}
+
+## Recommended approach
+
+{{recommended_approach}}
+
+## Files to create or modify
+
+{{files_to_modify}}
+
+## Step-by-step implementation
+
+{{implementation_steps}}
+
+## Environment variables
+
+{{environment_variables}}
+
+## Testing plan
+
+{{testing_plan}}
+
+## Rollback plan
+
+{{rollback_plan}}
+
+## Dependencies
+
+{{dependencies}}
+
+## References
+
+{{references}}

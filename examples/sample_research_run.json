@@ -1,0 +1,286 @@
+{
+  "id": "run_mock_next_convex_magic_link_auth",
+  "createdAt": "2026-06-30T00:00:00.000Z",
+  "goal": "Build a Next.js + Convex app with email magic links via Resend.",
+  "featureSpec": {
+    "featureKey": "next-convex-magic-link-auth",
+    "goal": "Build a Next.js + Convex app with email magic links via Resend.",
+    "feature": "email magic-link authentication",
+    "stack": [
+      "Next.js",
+      "Convex"
+    ],
+    "libraries": [
+      "@convex-dev/auth",
+      "@auth/core"
+    ],
+    "providers": [
+      "Resend"
+    ],
+    "mustHave": [
+      "email magic link",
+      "route protection",
+      "implementation proof"
+    ],
+    "shouldHave": [
+      "App Router",
+      "production-shaped repo",
+      "env var docs",
+      "tests or test hook"
+    ],
+    "exclude": [
+      "docs-only as primary source",
+      "deprecated auth pattern"
+    ],
+    "requiredConcepts": [
+      "convexAuth",
+      "Resend",
+      "useAuthActions",
+      "signIn",
+      "ConvexAuthNextjsProvider",
+      "ConvexAuthNextjsServerProvider",
+      "convexAuthNextjsMiddleware",
+      "auth.addHttpRoutes"
+    ],
+    "likelyFiles": [
+      "package.json",
+      "convex/auth.ts",
+      "convex/http.ts",
+      "convex/auth.config.ts",
+      "middleware.ts",
+      "proxy.ts",
+      "src/middleware.ts",
+      "app/**/login/page.tsx",
+      "src/app/**/login/page.tsx",
+      "components/*Provider*.tsx"
+    ],
+    "proofRequirements": [
+      {
+        "key": "dependency_proof",
+        "description": "package.json proves Next.js, Convex, Convex Auth, and email provider dependencies.",
+        "required": true,
+        "signals": [
+          "next",
+          "convex",
+          "@convex-dev/auth",
+          "@auth/core",
+          "resend"
+        ]
+      },
+      {
+        "key": "server_auth_proof",
+        "description": "Convex auth provider configured with Resend or equivalent email provider.",
+        "required": true,
+        "signals": [
+          "convexAuth",
+          "Resend"
+        ]
+      },
+      {
+        "key": "client_flow_proof",
+        "description": "Client login flow calls useAuthActions().signIn for email link.",
+        "required": true,
+        "signals": [
+          "useAuthActions",
+          "signIn('resend'",
+          "signIn(\"resend\""
+        ]
+      },
+      {
+        "key": "route_protection_proof",
+        "description": "Middleware/proxy protects routes using Convex auth.",
+        "required": true,
+        "signals": [
+          "convexAuthNextjsMiddleware",
+          "createRouteMatcher"
+        ]
+      }
+    ]
+  },
+  "probes": [
+    {
+      "id": "hp_convex_resend_provider",
+      "kind": "high_precision",
+      "query": "\"convexAuth\" \"Resend(\"",
+      "rationale": "Find Convex Auth server provider configuration using Resend.",
+      "expectedSignals": [
+        "convexAuth",
+        "Resend provider",
+        "convex/auth.ts"
+      ]
+    },
+    {
+      "id": "hp_client_signin_resend_single",
+      "kind": "high_precision",
+      "query": "\"signIn('resend'\" \"@convex-dev/auth/react\"",
+      "rationale": "Find client login forms using Convex Auth actions with Resend.",
+      "expectedSignals": [
+        "useAuthActions",
+        "signIn('resend'"
+      ]
+    },
+    {
+      "id": "hp_client_signin_resend_double",
+      "kind": "high_precision",
+      "query": "\"signIn(\\\"resend\\\"\" \"@convex-dev/auth/react\"",
+      "rationale": "Same as single-quote query but for double-quoted code.",
+      "expectedSignals": [
+        "useAuthActions",
+        "signIn(\"resend\""
+      ]
+    },
+    {
+      "id": "hp_middleware",
+      "kind": "high_precision",
+      "query": "\"convexAuthNextjsMiddleware\" \"@convex-dev/auth/nextjs/server\"",
+      "rationale": "Find route protection implemented with Convex Auth Next.js middleware.",
+      "expectedSignals": [
+        "middleware/proxy",
+        "route protection"
+      ]
+    },
+    {
+      "id": "recall_auth_resend",
+      "kind": "recall",
+      "query": "\"@convex-dev/auth\" \"Resend\"",
+      "rationale": "Find broader repos that combine Convex Auth and Resend.",
+      "expectedSignals": [
+        "dependency proof",
+        "provider proof"
+      ]
+    },
+    {
+      "id": "path_auth_ts",
+      "kind": "path_targeted",
+      "query": "\"Resend(\" path:convex/auth.ts",
+      "rationale": "Find conventional Convex auth provider files.",
+      "expectedSignals": [
+        "convex/auth.ts",
+        "Resend"
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "repo": "headcodecms/headcodecms",
+      "owner": "headcodecms",
+      "name": "headcodecms",
+      "defaultBranch": "main",
+      "url": "https://github.com/headcodecms/headcodecms",
+      "archived": false,
+      "stars": 0,
+      "pushedAt": "mock",
+      "discoveredBy": [
+        "hp_convex_resend_provider",
+        "hp_client_signin_resend_single",
+        "hp_middleware"
+      ],
+      "matchedPaths": [
+        "package.json",
+        "convex/auth.ts",
+        "app/(admin)/admin/login/page.tsx",
+        "proxy.ts"
+      ],
+      "candidateSignals": [
+        {
+          "key": "dependency_proof",
+          "label": "package.json contains Next.js, Convex, @convex-dev/auth, and @auth/core",
+          "source": "mock",
+          "confidence": 0.95
+        },
+        {
+          "key": "server_auth_proof",
+          "label": "convex/auth.ts configures Resend inside convexAuth",
+          "source": "mock",
+          "confidence": 0.95
+        },
+        {
+          "key": "client_flow_proof",
+          "label": "login page calls signIn('resend', formData)",
+          "source": "mock",
+          "confidence": 0.95
+        },
+        {
+          "key": "route_protection_proof",
+          "label": "proxy.ts uses convexAuthNextjsMiddleware for admin route protection",
+          "source": "mock",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "repo": "justinwlin/convex-magic-link-authentication",
+      "owner": "justinwlin",
+      "name": "convex-magic-link-authentication",
+      "defaultBranch": "main",
+      "url": "https://github.com/justinwlin/convex-magic-link-authentication",
+      "archived": false,
+      "stars": 0,
+      "pushedAt": "mock",
+      "discoveredBy": [
+        "recall_auth_resend"
+      ],
+      "matchedPaths": [
+        "README.md"
+      ],
+      "candidateSignals": [
+        {
+          "key": "guide_reference",
+          "label": "README describes Convex Auth with Resend magic links",
+          "source": "mock",
+          "confidence": 0.8
+        },
+        {
+          "key": "docs_only",
+          "label": "Small guide-style repo with limited implementation surface",
+          "source": "mock",
+          "confidence": 0.85
+        }
+      ]
+    }
+  ],
+  "scoredCandidates": [
+    {
+      "repo": "headcodecms/headcodecms",
+      "score": 0.88,
+      "class": "production",
+      "positiveSignals": [
+        "dependency_proof",
+        "server_auth_proof",
+        "client_flow_proof",
+        "route_protection_proof"
+      ],
+      "negativeSignals": [],
+      "missingProof": [
+        "Inspect convex/http.ts and env docs in a real run."
+      ],
+      "rejectionReasons": [],
+      "nextAction": "extract"
+    },
+    {
+      "repo": "justinwlin/convex-magic-link-authentication",
+      "score": 0.52,
+      "class": "reference",
+      "positiveSignals": [
+        "guide_reference"
+      ],
+      "negativeSignals": [
+        "docs_only"
+      ],
+      "missingProof": [
+        "Need real implementation files beyond README."
+      ],
+      "rejectionReasons": [],
+      "nextAction": "read_more"
+    }
+  ],
+  "selectedRepos": [
+    "headcodecms/headcodecms",
+    "justinwlin/convex-magic-link-authentication"
+  ],
+  "explanations": [],
+  "artifacts": [],
+  "warnings": [
+    "This is mock data. A real run must verify exact files and current repository contents."
+  ]
+}

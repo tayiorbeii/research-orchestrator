@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/plan_artifact.schema.json",
+  "title": "PlanArtifact",
+  "type": "object",
+  "required": [
+    "feature",
+    "files",
+    "implementationSteps",
+    "evidence"
+  ],
+  "properties": {
+    "feature": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "role"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "modify",
+              "inspect",
+              "delete"
+            ]
+          }
+        }
+      }
+    },
+    "implementationSteps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "environmentVariables": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "evidence_anchor.schema.json"
+      }
+    }
+  }
+}

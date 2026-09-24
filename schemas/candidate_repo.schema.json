@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/candidate_repo.schema.json",
+  "title": "CandidateRepo",
+  "type": "object",
+  "required": [
+    "repo",
+    "owner",
+    "name",
+    "discoveredBy",
+    "matchedPaths",
+    "candidateSignals"
+  ],
+  "properties": {
+    "repo": {
+      "type": "string"
+    },
+    "owner": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "defaultBranch": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "archived": {
+      "type": "boolean"
+    },
+    "stars": {
+      "type": "number"
+    },
+    "pushedAt": {
+      "type": "string"
+    },
+    "discoveredBy": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "matchedPaths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "candidateSignals": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Signal"
+      }
+    }
+  },
+  "$defs": {
+    "Signal": {
+      "type": "object",
+      "required": [
+        "key",
+        "label",
+        "source",
+        "confidence"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "number"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "metadata",
+            "search",
+            "file",
+            "deepwiki",
+            "human",
+            "mock"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/research_run.schema.json",
+  "title": "ResearchRun",
+  "type": "object",
+  "required": [
+    "id",
+    "createdAt",
+    "goal",
+    "featureSpec",
+    "probes",
+    "candidates",
+    "scoredCandidates",
+    "selectedRepos",
+    "artifacts",
+    "warnings"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "createdAt": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "featureSpec": {
+      "$ref": "feature_spec.schema.json"
+    },
+    "probes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "$ref": "candidate_repo.schema.json"
+      }
+    },
+    "scoredCandidates": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "selectedRepos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "explanations": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "kind",
+          "createdAt"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

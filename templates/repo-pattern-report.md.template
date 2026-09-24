@@ -1,0 +1,33 @@
+# Repo Pattern Report: {{repo}}
+
+## Classification
+
+{{classification}}
+
+## Why selected
+
+{{why_selected}}
+
+## Implementation map
+
+{{implementation_map}}
+
+## Evidence
+
+{{evidence}}
+
+## What to copy
+
+{{copy}}
+
+## What to adapt
+
+{{adapt}}
+
+## What to avoid
+
+{{avoid}}
+
+## Open questions
+
+{{open_questions}}

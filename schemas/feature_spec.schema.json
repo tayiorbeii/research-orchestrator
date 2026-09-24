@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/feature_spec.schema.json",
+  "title": "FeatureSpec",
+  "type": "object",
+  "required": [
+    "featureKey",
+    "goal",
+    "feature",
+    "stack",
+    "requiredConcepts",
+    "proofRequirements"
+  ],
+  "properties": {
+    "featureKey": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "feature": {
+      "type": "string"
+    },
+    "goalKind": {
+      "type": "string",
+      "enum": [
+        "application",
+        "research"
+      ],
+      "default": "application"
+    },
+    "stack": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "libraries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "providers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "mustHave": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "shouldHave": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "exclude": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "requiredConcepts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "likelyFiles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "proofRequirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "key",
+          "description",
+          "required"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "signals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

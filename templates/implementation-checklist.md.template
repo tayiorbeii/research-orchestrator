@@ -1,0 +1,38 @@
+# Implementation Checklist: {{feature}}
+
+## Setup
+
+- [ ] Dependencies installed.
+- [ ] Environment variables documented.
+- [ ] Local development configuration works.
+
+## Server/backend
+
+- [ ] Server auth/provider config created.
+- [ ] HTTP/auth routes wired.
+- [ ] Database/schema changes added.
+- [ ] Server-side access control verified.
+
+## Client/frontend
+
+- [ ] Provider wraps app correctly.
+- [ ] Login/sign-in form implemented.
+- [ ] Loading/sent/error states handled.
+- [ ] Sign-out flow implemented.
+
+## Routing/protection
+
+- [ ] Protected routes defined.
+- [ ] Middleware/proxy redirects unauthenticated users.
+- [ ] Callback/redirect flow verified.
+
+## Tests
+
+- [ ] Unit tests added.
+- [ ] Integration or e2e path tested.
+- [ ] Manual smoke test completed.
+
+## Documentation
+
+- [ ] README or internal docs updated.
+- [ ] Risks/open questions resolved or accepted.

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/evidence_anchor.schema.json",
+  "title": "EvidenceAnchor",
+  "type": "object",
+  "required": [
+    "id",
+    "provider",
+    "path",
+    "role",
+    "proofLevel"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "provider": {
+      "type": "string",
+      "enum": [
+        "octocode",
+        "github",
+        "deepwiki",
+        "local",
+        "mock"
+      ]
+    },
+    "repo": {
+      "type": "string"
+    },
+    "ref": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "startLine": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "endLine": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "matchText": {
+      "type": "string"
+    },
+    "matchedSignal": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string"
+    },
+    "proofLevel": {
+      "type": "string",
+      "enum": [
+        "candidate",
+        "partial",
+        "proved"
+      ]
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "name": "research-orchestrator",
+  "version": "0.1.0",
+  "description": "Evidence-grounded implementation research: a CLI + MCP server that turns a high-level feature goal into scored candidate repos, verified source anchors, and ready-to-use planning artifacts.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Taylor Bell",
+  "bin": {
+    "research-orchestrator": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tayiorbeii/research-orchestrator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tayiorbeii/research-orchestrator/issues"
+  },
+  "homepage": "https://github.com/tayiorbeii/research-orchestrator#readme",
+  "keywords": [
+    "research",
+    "code-search",
+    "octocode",
+    "github",
+    "evidence",
+    "planning",
+    "mcp",
+    "mcp-server",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "examples",
+    "schemas",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && npm run build:bridges",
+    "build:core": "tsc -p tsconfig.json",
+    "build:bridges": "tsc -p bridges/tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "cli": "tsx src/cli.ts",
+    "mcp": "tsx src/cli.ts mcp",
+    "eval": "tsx src/cli.ts eval",
+    "smoke:octocode": "tsx scripts/smoke-octocode-bridge.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0",
+    "vitest": "^3.0.0"
+  }
+}

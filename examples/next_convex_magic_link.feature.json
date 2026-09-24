@@ -1,0 +1,95 @@
+{
+  "featureKey": "next-convex-magic-link-auth",
+  "goal": "Build a Next.js + Convex app with email magic links via Resend.",
+  "feature": "email magic-link authentication",
+  "stack": [
+    "Next.js",
+    "Convex"
+  ],
+  "libraries": [
+    "@convex-dev/auth",
+    "@auth/core"
+  ],
+  "providers": [
+    "Resend"
+  ],
+  "mustHave": [
+    "email magic link",
+    "route protection",
+    "implementation proof"
+  ],
+  "shouldHave": [
+    "App Router",
+    "production-shaped repo",
+    "env var docs",
+    "tests or test hook"
+  ],
+  "exclude": [
+    "docs-only as primary source",
+    "deprecated auth pattern"
+  ],
+  "requiredConcepts": [
+    "convexAuth",
+    "Resend",
+    "useAuthActions",
+    "signIn",
+    "ConvexAuthNextjsProvider",
+    "ConvexAuthNextjsServerProvider",
+    "convexAuthNextjsMiddleware",
+    "auth.addHttpRoutes"
+  ],
+  "likelyFiles": [
+    "package.json",
+    "convex/auth.ts",
+    "convex/http.ts",
+    "convex/auth.config.ts",
+    "middleware.ts",
+    "proxy.ts",
+    "src/middleware.ts",
+    "app/**/login/page.tsx",
+    "src/app/**/login/page.tsx",
+    "components/*Provider*.tsx"
+  ],
+  "proofRequirements": [
+    {
+      "key": "dependency_proof",
+      "description": "package.json proves Next.js, Convex, Convex Auth, and email provider dependencies.",
+      "required": true,
+      "signals": [
+        "next",
+        "convex",
+        "@convex-dev/auth",
+        "@auth/core",
+        "resend"
+      ]
+    },
+    {
+      "key": "server_auth_proof",
+      "description": "Convex auth provider configured with Resend or equivalent email provider.",
+      "required": true,
+      "signals": [
+        "convexAuth",
+        "Resend"
+      ]
+    },
+    {
+      "key": "client_flow_proof",
+      "description": "Client login flow calls useAuthActions().signIn for email link.",
+      "required": true,
+      "signals": [
+        "useAuthActions",
+        "signIn('resend'",
+        "signIn(\"resend\""
+      ]
+    },
+    {
+      "key": "route_protection_proof",
+      "description": "Middleware/proxy protects routes using Convex auth.",
+      "required": true,
+      "signals": [
+        "convexAuthNextjsMiddleware",
+        "createRouteMatcher"
+      ]
+    }
+  ]
+}

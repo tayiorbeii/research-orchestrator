@@ -1,0 +1,63 @@
+[
+  {
+    "id": "hp_convex_resend_provider",
+    "kind": "high_precision",
+    "query": "\"convexAuth\" \"Resend(\"",
+    "rationale": "Find Convex Auth server provider configuration using Resend.",
+    "expectedSignals": [
+      "convexAuth",
+      "Resend provider",
+      "convex/auth.ts"
+    ]
+  },
+  {
+    "id": "hp_client_signin_resend_single",
+    "kind": "high_precision",
+    "query": "\"signIn('resend'\" \"@convex-dev/auth/react\"",
+    "rationale": "Find client login forms using Convex Auth actions with Resend.",
+    "expectedSignals": [
+      "useAuthActions",
+      "signIn('resend'"
+    ]
+  },
+  {
+    "id": "hp_client_signin_resend_double",
+    "kind": "high_precision",
+    "query": "\"signIn(\\\"resend\\\"\" \"@convex-dev/auth/react\"",
+    "rationale": "Same as single-quote query but for double-quoted code.",
+    "expectedSignals": [
+      "useAuthActions",
+      "signIn(\"resend\""
+    ]
+  },
+  {
+    "id": "hp_middleware",
+    "kind": "high_precision",
+    "query": "\"convexAuthNextjsMiddleware\" \"@convex-dev/auth/nextjs/server\"",
+    "rationale": "Find route protection implemented with Convex Auth Next.js middleware.",
+    "expectedSignals": [
+      "middleware/proxy",
+      "route protection"
+    ]
+  },
+  {
+    "id": "recall_auth_resend",
+    "kind": "recall",
+    "query": "\"@convex-dev/auth\" \"Resend\"",
+    "rationale": "Find broader repos that combine Convex Auth and Resend.",
+    "expectedSignals": [
+      "dependency proof",
+      "provider proof"
+    ]
+  },
+  {
+    "id": "path_auth_ts",
+    "kind": "path_targeted",
+    "query": "\"Resend(\" path:convex/auth.ts",
+    "rationale": "Find conventional Convex auth provider files.",
+    "expectedSignals": [
+      "convex/auth.ts",
+      "Resend"
+    ]
+  }
+]

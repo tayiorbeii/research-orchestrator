@@ -1,0 +1,47 @@
+# Research: {{feature}}
+
+## Goal
+
+{{goal}}
+
+## Summary
+
+{{summary}}
+
+## Selected repositories
+
+| Repo | Class | Score | Why selected |
+|---|---:|---:|---|
+{{selected_repos_table}}
+
+## Candidate analysis
+
+{{candidate_analysis}}
+
+## Implementation pattern
+
+{{implementation_pattern}}
+
+## Evidence map
+
+{{evidence_map}}
+
+## Libraries and dependencies
+
+{{dependencies}}
+
+## Files likely needed in target project
+
+{{target_files}}
+
+## Pitfalls and edge cases
+
+{{pitfalls}}
+
+## Open questions
+
+{{open_questions}}
+
+## Skeptic notes
+
+{{skeptic_notes}}
