@@ -1,50 +1,28 @@
-# Implementation Checklist: email magic-link authentication
+> **Synthetic/mock evidence:** fixture observations are not live repository findings.
 
-## Dependencies
-- [ ] Install or verify `next`.
-- [ ] Install or verify `convex`.
-- [ ] Install or verify `@convex-dev/auth`.
-- [ ] Install or verify `@auth/core`.
-- [ ] Install or verify `resend`.
+# Research Recovery Checklist: email magic-link authentication
 
-## Environment
-- [ ] Set `AUTH_RESEND_KEY` (name only; store the value in your secret store).
-- [ ] Set `CONVEX_DEPLOYMENT` (name only; store the value in your secret store).
-- [ ] Set `NEXT_PUBLIC_CONVEX_URL` (name only; store the value in your secret store).
-- [ ] Set `CONVEX_SITE_URL` (name only; store the value in your secret store).
-- [ ] Set `SITE_URL` (name only; store the value in your secret store).
-- [ ] Set `JWT_PRIVATE_KEY` (name only; store the value in your secret store).
-- [ ] Set `JWKS` (name only; store the value in your secret store).
+> ⚠ Run status: **partial** (1 required question(s) remain unsatisfied., synthetic_evidence).
+> No implementation work should proceed from the previous run. Resolve the
+> items below, then re-run research before building anything.
 
-## Files to create or modify
-- [ ] `package.json` — dependency manifest (follow the proved pattern from 1 anchor).
-- [ ] `convex/auth.ts` — server auth configuration (follow the proved pattern from 1 anchor).
-- [ ] `convex/http.ts` — http route wiring (no direct proof; verify against the selected repos).
-- [ ] `convex/auth.config.ts` — auth provider config (no direct proof; verify against the selected repos).
-- [ ] `middleware.ts` — route protection (no direct proof; verify against the selected repos).
-- [ ] `proxy.ts` — route protection (follow the proved pattern from 2 anchors).
-- [ ] `src/middleware.ts` — route protection (no direct proof; verify against the selected repos).
-- [ ] `app/(admin)/admin/login/page.tsx` — server_auth_proof (follow the proved pattern from 1 anchor).
+## Confirm the research specification
+- [ ] Verify the normalized feature/key terms captured the real subject (see research.md "What was searched").
+- [ ] If key entities were dropped, add structured `hints` (requiredConcepts, likelyFiles, proofRequirements).
+- [ ] Confirm the goal was classified correctly (research/migration vs. application build).
 
-## Implementation flow
-- [ ] Server: convex/auth.ts exports convexAuth({ providers: [Resend({ ... })] })
-- [ ] Server: convex/http.ts wires auth routes via auth.addHttpRoutes(http)
-- [ ] Server: convex/auth.config.ts declares the auth provider domain/application ID
-- [ ] Server: Magic-link email is sent by the Resend provider with a callback URL back to the Convex site
-- [ ] Client: App is wrapped in ConvexAuthNextjsServerProvider (server) and ConvexAuthNextjsProvider (client)
-- [ ] Client: Login page calls useAuthActions().signIn("resend", formData) with the user email
-- [ ] Client: UI shows a 'check your email' state after sending the link
-- [ ] Client: Clicking the emailed link completes sign-in and redirects to the app
-- [ ] Routing: middleware.ts / src/middleware.ts / proxy.ts uses convexAuthNextjsMiddleware
-- [ ] Routing: createRouteMatcher defines which routes require authentication
-- [ ] Routing: Unauthenticated users are redirected to the login page
+## Verify the evidence provider
+- [ ] Confirm the Octocode bridge is configured (RESEARCH_OCTOCODE_BRIDGE, transport, auth).
+- [ ] Distinguish a transport/auth failure from a genuine empty result (see Diagnostics).
+- [ ] Check rate limits / quotas if searches returned nothing.
+- [ ] Re-run with RESEARCH_OCTOCODE_DEBUG=1 and inspect generated probes + provider responses.
 
-## Tests
-- [ ] Unit test the login form submit path (email captured, signIn called with 'resend')
-- [ ] Integration test that protected routes redirect unauthenticated users
-- [ ] Manual smoke test of the full email round trip
+## Broaden discovery
+- [ ] Run each repo_search probe individually against ghSearchRepos and inspect results.
+- [ ] For migration goals, add the source and target project repos/docs as explicit candidates.
+- [ ] Add official documentation URLs as explicit hints if discovery keeps missing the project.
 
-## Verification & rollout
-- [ ] Re-check every accepted repo's evidence anchors against live source before relying on them.
-- [ ] Land the change behind small, isolated commits so a single revert removes it.
-- [ ] Update README / internal docs and resolve or explicitly accept open questions.
+## Before re-running
+- [ ] Back up or version the previous (inconclusive) artifacts for auditability.
+- [ ] Re-run into a new output directory; do not overwrite until evidence is real.
+- [ ] Only proceed to an implementation checklist once evidence anchors exist.

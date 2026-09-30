@@ -47,6 +47,7 @@
     "cli": "tsx src/cli.ts",
     "mcp": "tsx src/cli.ts mcp",
     "eval": "tsx src/cli.ts eval",
+    "eval:receipts": "tsx scripts/generate-phase6-receipts.ts",
     "smoke:octocode": "tsx scripts/smoke-octocode-bridge.ts"
   },
   "dependencies": {

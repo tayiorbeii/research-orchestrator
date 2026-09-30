@@ -28,6 +28,11 @@ describe("generateSearchProbes", () => {
     expect(allQueries).toContain("useAuthActions");
   });
 
+  it("quotes individual anchors but never multiword task prose", () => {
+    const quotedPhrases = probes.flatMap((probe) => probe.query.match(/"[^\"]*"/g) ?? []);
+    expect(quotedPhrases.every((phrase) => !/\s/.test(phrase.slice(1, -1)))).toBe(true);
+  });
+
   it("targets conventional paths", () => {
     const pathProbes = probes.filter((p) => p.kind === "path_targeted");
     expect(pathProbes.length).toBeGreaterThan(0);

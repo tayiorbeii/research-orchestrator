@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/search_probe_v2.schema.json",
+  "title": "SearchProbeV2",
+  "type": "object",
+  "required": ["id", "questionIds", "mechanismIds", "termIds", "purpose", "intent", "providerQuery", "providerArgs", "expectedSourceKinds", "expectedPaths", "rationale", "alternativesLeftOpen", "predecessorProbeIds"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "questionIds": { "type": "array", "items": { "type": "string" } },
+    "mechanismIds": { "type": "array", "items": { "type": "string" } },
+    "termIds": { "type": "array", "items": { "type": "string" } },
+    "purpose": { "enum": ["discovery", "source_location", "candidate_check"] },
+    "intent": { "type": "string", "minLength": 1 },
+    "providerQuery": { "type": "string", "minLength": 1 },
+    "providerArgs": { "type": "object" },
+    "expectedSourceKinds": { "type": "array", "items": { "enum": ["repository_file", "repository_metadata", "documentation_page", "issue_proposal", "local_artifact", "synthetic_fixture"] } },
+    "expectedPaths": { "type": "array", "items": { "type": "string" } },
+    "capabilityVersion": { "type": "string" },
+    "rationale": { "type": "string", "minLength": 1 },
+    "alternativesLeftOpen": { "type": "array", "items": { "type": "string" } },
+    "predecessorProbeIds": { "type": "array", "items": { "type": "string" } },
+    "refinementReason": { "enum": ["ambiguous_terms", "incidental_matches", "empty_scoped_result", "unsupported_qualifier", "new_term_observed"] }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,143 @@
+{
+  "synthetic": true,
+  "banner": "SYNTHETIC MOCK RECEIPT — NOT LIVE PROVIDER EVIDENCE",
+  "provenance": "Authored for Phase 6 from synthetic source text; no provider output or external repository was copied.",
+  "fixtureId": "review-tool-capabilities",
+  "title": "Advertised versus proposed review-tool capabilities",
+  "surface": "brief",
+  "split": "held_out",
+  "prompt": "Separate advertised capabilities from proposed features.",
+  "frozenCorpus": [
+    {
+      "sourceId": "review-docs",
+      "repo": "synthetic/review-tool",
+      "path": "docs/features.md",
+      "excerpt": "Review bundles include inline findings for changed files.",
+      "label": "relevant"
+    },
+    {
+      "sourceId": "review-issue",
+      "repo": "synthetic/review-tool",
+      "path": "issues/17",
+      "excerpt": "Proposal: planned support for custom rules; not implemented.",
+      "label": "relevant"
+    },
+    {
+      "sourceId": "review-negative",
+      "repo": "synthetic/review-tool-no-impl",
+      "path": "src/review.ts",
+      "excerpt": "// No review bundles or inline findings are implemented in this package.",
+      "label": "negative"
+    },
+    {
+      "sourceId": "review-noise",
+      "repo": "synthetic/review-chat",
+      "path": "docs/roadmap.md",
+      "excerpt": "Users asked whether review bundles could eventually include inline findings.",
+      "label": "noisy"
+    }
+  ],
+  "independentLabels": {
+    "relevantSourceIds": [
+      "review-docs",
+      "review-issue"
+    ],
+    "supportedFacts": [
+      {
+        "questionId": "advertised",
+        "assertionIncludes": "Review bundles",
+        "sourceId": "review-docs"
+      },
+      {
+        "questionId": "proposed",
+        "assertionIncludes": "planned support for custom rules",
+        "sourceId": "review-issue"
+      }
+    ],
+    "expectedQuestionCoverage": {
+      "advertised": "satisfied",
+      "proposed": "satisfied"
+    },
+    "expectedUntouchedQuestions": []
+  },
+  "result": {
+    "taskId": "review-tool-capabilities",
+    "split": "held_out",
+    "surface": "brief",
+    "intentGroups": [
+      {
+        "questionId": "advertised",
+        "intent": "feature_exploration",
+        "usefulSourcesFound": 1,
+        "relevantSourcesLabeled": 1
+      },
+      {
+        "questionId": "proposed",
+        "intent": "feature_exploration",
+        "usefulSourcesFound": 1,
+        "relevantSourcesLabeled": 1
+      }
+    ],
+    "supportedClaimPrecision": {
+      "trueSupported": 2,
+      "falseSupported": 0,
+      "labeledSupported": 2,
+      "precision": 1
+    },
+    "unsupportedVerificationCount": {
+      "claimOverclaims": 0,
+      "answerLevelOverclaims": 0,
+      "total": 0
+    },
+    "questionCoverage": {
+      "expected": 2,
+      "satisfied": 2,
+      "byQuestion": [
+        {
+          "questionId": "advertised",
+          "expected": "satisfied",
+          "actual": "satisfied"
+        },
+        {
+          "questionId": "proposed",
+          "expected": "satisfied",
+          "actual": "satisfied"
+        }
+      ],
+      "coverageMatch": true,
+      "coverageMismatchQuestionIds": [],
+      "untouchedRequired": [],
+      "expectedUntouched": [],
+      "untouchedMatch": true
+    },
+    "cost": {
+      "queryCount": 5,
+      "fileReadCount": 4,
+      "msToFirstUsefulObservation": 1,
+      "msToOutcome": 2
+    },
+    "events": {
+      "providerFailures": 0,
+      "partialReads": 0,
+      "budgetStops": 0,
+      "clarificationOrAbstention": 0
+    },
+    "legacyRoundTripLosses": {
+      "count": 11,
+      "fields": [
+        "evidencePolicyVersion",
+        "evidenceOrigin",
+        "observations",
+        "assessments",
+        "coverage",
+        "outcome",
+        "candidateStates",
+        "brief",
+        "compiledProbes",
+        "probeOutcomes",
+        "budgetLedger"
+      ]
+    }
+  },
+  "evaluationLane": "mock_replay"
+}

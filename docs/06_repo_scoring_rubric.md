@@ -12,7 +12,15 @@
 | `false_positive` | Matches search terms but does not implement the feature. |
 | `unknown` | Insufficient evidence. |
 
-## Base scoring
+## Legacy candidate ranking
+
+The following score is a legacy triage heuristic only. It can order candidates
+for further inspection; it cannot establish claim support or mark a run
+complete. Current v2 output derives support from bounded, same-subject source
+observations and explicit question obligations. A high score, selected repo,
+search snippet, or imported confidence value is not evidence.
+
+## Base scoring (triage only)
 
 | Signal | Weight |
 |---|---:|
@@ -53,9 +61,9 @@ Multiple exact files show the feature across its server/client/config flow.
 
 Implementation proof plus production-shaped repo and operational details.
 
-## Generic accepted-repo requirements
+## Legacy accepted-repo heuristic
 
-A repo should not be accepted unless it has:
+A candidate should not be promoted by the legacy heuristic unless it has:
 
 - at least one dependency/config proof
 - at least two implementation anchors

@@ -1,4 +1,6 @@
 {
+  "synthetic": true,
+  "provenance": "Illustrative feature request fixture; no provider output or external repository evidence is included.",
   "featureKey": "next-convex-magic-link-auth",
   "goal": "Build a Next.js + Convex app with email magic links via Resend.",
   "feature": "email magic-link authentication",

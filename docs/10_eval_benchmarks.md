@@ -1,94 +1,109 @@
 # 10 Evaluation Benchmarks
 
-## Purpose
+## Purpose and lane boundaries
 
-Measure whether Research Orchestrator produces better implementation plans with less wasted context and fewer false positives.
+`npm run eval` runs a deterministic, offline replay over frozen synthetic
+provider corpora. It does not contact GitHub, Octocode, DeepWiki, or another live
+provider. The report labels this as `mock_replay`; a future live pilot must be
+reported separately with provider versions, exact input, source revisions,
+calls, cost, and limitations. A mock result is not evidence of live search
+quality or global repository recall.
 
-## Benchmark lanes
+The evaluator runs through the v2 brief engine. The under-specified held-out
+case goes through the same conservative goal adapter used by `find --goal`;
+the CLI also retains separate tests for the actual `--goal` and `--brief`
+commands.
 
-| Lane | Description |
+## Frozen corpus
+
+Each task in `src/eval/benchmarkTasks.ts` includes synthetic provider source
+text, explicit negative and noisy candidates, provenance, a query-tuning split,
+and independently authored labels for relevant sources, supported facts, and
+expected question coverage. Labels are not derived from scorer output. The
+corpus covers:
+
+| Fixture | Task family | Split | Surface |
+|---|---|---|---|
+| `library-webhook-signature` | webhook-signature API invocation | tuning | v2 brief |
+| `bounded-retry-cancellation` | bounded retry and cancellation | tuning | v2 brief |
+| `projection-rebuilding` | projection rebuilding from events | tuning | v2 brief |
+| `review-tool-capabilities` | docs advertised versus issue proposed | held out | v2 brief |
+| `mixed-api-and-retry` | mixed library and behavior request | held out | v2 brief |
+| `underspecified-improvement` | deliberately under-specified request | held out | legacy goal adapter |
+
+The held-out fixtures are excluded from query-tuning iterations. The
+feature-exploration fixture currently carries `knownDefect:
+"source-kind-allowlists"`; retain its labels until the core fix is integrated.
+Historical Phase 0 adversarial inputs live in
+`tests/fixtures/research-integrity/` and stay as regression fixtures, not
+positive evidence. `examples/sample_research_run.json` is a newly executed
+synthetic v2 replay over the bundled mock candidate corpus, not an in-place
+upgrade of its former legacy envelope. The original v1 sample bytes are
+preserved at `tests/fixtures/research-integrity/historical-sample-run-v1.json`
+for legacy detection tests; the historical incident goal fixture is unchanged.
+
+## Metrics (reported independently)
+
+The JSON report contains each measure by task and a total where aggregation is
+meaningful. It does not combine them into one score.
+
+| Measure | Definition |
 |---|---|
-| `octocode_only` | Agent manually uses Octocode tools. |
-| `orchestrator_mock` | Mock deterministic flow. |
-| `orchestrator_octocode` | Orchestrator using Octocode provider. |
-| `orchestrator_hybrid` | Octocode plus DeepWiki enrichment. |
-| `custom_github` | Direct GitHub provider where available. |
+| Useful-source discovery | Labeled relevant sources returned by search, grouped by question and intent, over relevant sources in the frozen corpus. |
+| Supported-claim precision | Engine-supported claims matched against independent question, subject, and assertion labels; reports true, false, labeled counts, and precision. |
+| Unsupported verification | Supported claims unmatched by labels plus answer-level verified overclaims. |
+| Question coverage | Expected and actual status per question, satisfied count, required questions left `not_attempted`, and whether untouched labels match. |
+| Cost | Logical query units and file reads from the v2 budget ledger; elapsed time to first useful read and to the run outcome. |
+| Provider/run events | Provider failures, partial reads, budget stops, and `needs_input`/inconclusive abstentions. |
+| Legacy round-trip losses | V2-only populated fields lost by the compatibility projection that can be parsed as a v1 envelope. |
 
-## Metrics
+The elapsed-time measurements are local replay timings, not service latency.
+The fixed v2-to-v1 projection count describes information absent from that
+legacy envelope; it does not rewrite or upgrade historical evidence.
 
-```ts
-type ResearchRunMetrics = {
-  taskId: string;
-  lane: string;
-  wallMs: number;
-  toolCalls: number;
-  providerCalls: number;
-  tokensIn?: number;
-  tokensOut?: number;
-  candidateRepos: number;
-  provedRepos: number;
-  falsePositiveRepos: number;
-  exactEvidenceAnchors: number;
-  artifactCompletenessScore: number;
-  humanCorrectionCount: number;
-};
+## Hard regression rule
+
+The designated adversarial set is the Phase 0 research-integrity fixture suite
+plus every negative candidate in the six replay fixtures. It must produce zero
+false supported/verified outputs. Positive replay fixtures must continue to
+produce their independently labeled supported facts; an abstention-only
+implementation fails this rule. A known defect is reported without weakening
+the label, and the integration owner reruns the corpus after both lanes merge.
+
+## Running and interpreting the report
+
+The confirmed CLI syntax is:
+
+```sh
+npm run eval
+npm run cli -- eval --out .research/eval-report.json
+npm run eval:receipts
 ```
 
-## Initial benchmark tasks
+The only eval flag is optional `--out <file.json>`. The command prints JSON to
+stdout and optionally writes the same report to the requested path. `--out` is
+not a provider selection flag. Live evaluation is a separate authorized
+operation and is not part of this command.
 
-1. Next.js + Convex + Resend magic links.
-2. Next.js + Convex + Clerk organizations.
-3. Next.js + Resend contact form/server action.
-4. Convex + Stripe checkout.
-5. Convex + file upload/storage.
-6. Hono + OpenAPI + Zod validation.
-7. Next.js middleware auth protection.
-8. Trigger.dev background job from a web app.
-9. Supabase magic link auth in App Router.
-10. Email verification flow with Resend.
+The report names the exact held-out fixture ids. Do not tune query construction
+against those cases. Do not treat the small frozen corpus as broad recall
+measurement or add accuracy/latency thresholds before a live baseline exists.
 
-## Completeness rubric
+## Demo receipts
 
-Score each artifact 0–5.
+Committed examples in `examples/receipts/` show a precise library request, an
+abstract request resolved through a vocabulary round trip, advertised versus
+proposed feature exploration, and an intentionally inconclusive request. Each
+receipt is synthetic and preserves its evidence scope and remaining gaps.
+Regenerate them with `npm run eval:receipts`.
 
-| Score | Meaning |
-|---:|---|
-| 0 | No useful plan. |
-| 1 | Generic plan with no evidence. |
-| 2 | Some relevant repos but weak proof. |
-| 3 | Good evidence but missing key implementation steps. |
-| 4 | Strong plan with exact evidence and minor gaps. |
-| 5 | Implementation-ready plan with evidence, risks, tests, and clear steps. |
+## Validation commands
 
-## Acceptance targets
-
-- Mock flow completeness score >= 4.
-- Real flow completeness score >= 4 on at least 6 of 10 benchmark tasks.
-- False-positive rate under 25%.
-- Every accepted repo has at least three evidence anchors.
-- Discovery under 45 seconds for top 10 candidates.
-- Deep proof under 3 minutes for top 3 repos.
-
-## Regression tests
-
-Create golden output snapshots for mock runs:
-
-```text
-tests/fixtures/next-convex-magic-link/
-  expected-research.md
-  expected-evidence.json
-  expected-plan.md
+```sh
+npm test
+npm run build
+npm run eval
 ```
 
-The exact prose may change, but the core sections and evidence counts should be stable.
-
-## Human evaluation questions
-
-Ask the reviewer:
-
-1. Would you trust this plan enough to start implementation?
-2. What key implementation detail is missing?
-3. Which repo evidence was most useful?
-4. Which repo should have been rejected?
-5. What did the system overclaim?
-6. What should the next research pass ask?
+Provider smoke tests are integration checks and do not constitute permission to
+run a paid or live research campaign.

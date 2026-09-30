@@ -3,6 +3,7 @@ export type ResearchErrorCode =
   | "rate_limited"
   | "no_results"
   | "incomplete_results"
+  | "access_denied"
   | "deepwiki_unavailable"
   | "invalid_feature_spec"
   | "artifact_write_failed";

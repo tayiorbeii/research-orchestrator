@@ -156,7 +156,12 @@ export function generateSearchProbes(spec: FeatureSpec): SearchProbe[] {
 }
 
 function quote(value: string): string {
-  return `"${value.replace(/"/g, '\\"')}"`;
+  // Exact-match a single anchor, but never turn multiword task prose into a
+  // quoted phrase. This preserves legacy term searches without overfitting a
+  // full goal sentence's formatting.
+  const anchor = value.replace(/\s+/g, " ").trim();
+  if (/\s/.test(anchor)) return anchor.replace(/["']/g, " ").trim();
+  return `"${anchor.replace(/"/g, '\\"')}"`;
 }
 
 /** Choose the most path-relevant concept for a path-targeted probe. */

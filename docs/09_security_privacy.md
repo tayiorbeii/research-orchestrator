@@ -13,7 +13,20 @@ This tool may process:
 - planning artifacts
 - optional local code evidence
 
-It must not persist secrets or private source by default.
+It must not persist secrets or private source by default. Mock mode is offline
+synthetic replay; it does not contact GitHub, Octocode, or DeepWiki. Live modes
+are selected explicitly and must not silently fall back to mock.
+
+## Local artifact fingerprints
+
+Planning reads only explicitly listed `localArtifacts` paths or supplied
+inline snippets. It does not recursively scan a repository. Redact sensitive
+values and user-specific path identifiers before deriving terms. Private
+package names and internal symbols are restricted from outbound probes unless
+`egressPolicy.allowRestrictedLocalTerms` is explicitly true. Remote source text
+and submissions are untrusted and cannot change budgets, source allowlists, or
+egress policy. A host-performed lookup is caller provenance, not an engine
+provider call or proof of support.
 
 ## Token handling
 
@@ -116,9 +129,11 @@ OCTOCODE_TOKEN
 RESEND_KEY
 ```
 
-## Audit log
+## Audit data
 
-Store a local audit log with safe metadata:
+The v2 run and its artifacts record safe run metadata, provider outcomes,
+observations, assessments, and warnings. The sample below is an illustrative
+shape; it is not a separate audit-log facility:
 
 ```json
 {

@@ -8,16 +8,16 @@ import type {
   ScoredCandidate,
   Signal,
 } from "../schemas/index.js";
+import { isExactQuotationSupport } from "./evidencePolicy.js";
+import { lineHasSignal } from "./collectEvidence.js";
 
 /**
  * Score a candidate repo against a feature spec using the rubric in
- * docs/06_repo_scoring_rubric.md. High scores require exact ("proved")
- * evidence anchors — search snippets and metadata alone cannot exceed 0.4.
+ * Phase 1 scores discovery leads. Exact quotations can support source statements,
+ * but cannot establish application behavior or promote a candidate to extraction.
  */
 
 const DOCS_PATH_PATTERN = /(^|\/)readme(\.|$)|\.mdx?$|(^|\/)docs\//i;
-const CONVENTION_PATH_PATTERN =
-  /middleware|proxy|(^|\/)convex\/auth|auth\.config|(login|signin|sign-in)\/page|\/api\/auth/i;
 const TEMPLATE_NAME_PATTERN = /template|starter|boilerplate/i;
 const TOY_NAME_PATTERN = /(^|[-_])(demo|toy|playground|hello-world|scratch)([-_]|$)/i;
 
@@ -26,12 +26,12 @@ export interface ScoreOptions {
   now?: Date;
 }
 
-/** Return required proof requirements that are not satisfied by proved anchors. */
+/** Return required roles that lack a current, narrow exact-quotation support. */
 export function getMissingRequiredProof(
   spec: FeatureSpec,
   evidence: EvidenceAnchor[],
 ): string[] {
-  const proved = evidence.filter((anchor) => anchor.proofLevel === "proved");
+  const proved = evidence.filter(isExactQuotationSupport);
   const missing: string[] = [];
   for (const req of spec.proofRequirements) {
     if (!req.required) continue;
@@ -40,13 +40,20 @@ export function getMissingRequiredProof(
       missing.push(`${req.key}: ${req.description}`);
       continue;
     }
-    // Existence proof promises that every named system is represented, not
-    // merely that one of the names appeared somewhere.
-    if (req.key === "existence_proof") {
+    // Every required signal must be present in an exact quoted observation for
+    // this role; a single incidental word cannot satisfy the whole obligation.
+    if (req.signals.length > 0 && spec.goalKind === "research" && req.key === "existence_proof") {
       for (const signal of req.signals) {
         if (!roleAnchors.some((anchor) => anchorMatchesSignal(anchor, signal))) {
           missing.push(`${req.key}:${signal}: ${req.description}`);
         }
+      }
+    } else if (req.signals.length > 0 && spec.goalKind === "research") {
+      const supportedByOneQuote = roleAnchors.some((anchor) =>
+        req.signals.every((signal) => lineHasSignal(anchor.matchText ?? "", signal)),
+      );
+      if (!supportedByOneQuote) {
+        missing.push(`${req.key}: one source quotation must contain ${req.signals.join(" and ")}: ${req.description}`);
       }
     }
   }
@@ -56,11 +63,7 @@ export function getMissingRequiredProof(
 function anchorMatchesSignal(anchor: EvidenceAnchor, signal: string): boolean {
   const expected = signal.trim().toLowerCase();
   if (!expected) return false;
-  if (anchor.matchedSignal !== undefined) {
-    return anchor.matchedSignal.trim().toLowerCase() === expected;
-  }
-  // Backward compatibility for persisted anchors created before matchedSignal
-  // was recorded explicitly.
+  if (anchor.matchedSignal !== undefined) return anchor.matchedSignal.trim().toLowerCase() === expected;
   return anchor.matchText?.toLowerCase().includes(expected) ?? false;
 }
 
@@ -71,15 +74,9 @@ export function scoreCandidate(
   options: ScoreOptions = {},
 ): ScoredCandidate {
   const anchors = evidence.filter((a) => !a.repo || a.repo === candidate.repo);
-  const proved = anchors.filter((a) => a.proofLevel === "proved");
-  const partial = anchors.filter((a) => a.proofLevel === "partial");
-  const provedRoles = new Set(proved.map((a) => a.role));
+  const proved = anchors.filter(isExactQuotationSupport);
+  const partial = anchors.filter((a) => !isExactQuotationSupport(a));
   const isResearchSpec = spec.goalKind === "research";
-  const implAnchors = isResearchSpec
-    ? []
-    : proved.filter((a) => a.role !== "dependency_proof");
-  const implPaths = new Set(implAnchors.map((a) => a.path));
-
   const positiveSignals: Signal[] = [];
   const negativeSignals: Signal[] = [];
   const missingProof: string[] = [];
@@ -108,7 +105,7 @@ export function scoreCandidate(
   const depAnchors = proved.filter((a) => a.role === "dependency_proof");
   const hasDependencyProof = depAnchors.length > 0;
   if (hasDependencyProof) {
-    positive("dependency_proof", "Dependency manifest proves required packages.", 20, depAnchors);
+    positive("dependency_declaration", "Dependency manifest states package declarations.", 20, depAnchors);
   }
 
   // --- Research proof (+30 per required research role)
@@ -116,44 +113,13 @@ export function scoreCandidate(
     for (const role of ["existence_proof", "behavior_proof"]) {
       const roleAnchors = proved.filter((anchor) => anchor.role === role);
       if (roleAnchors.length > 0) {
-        positive(role, `${role.replace(/_/g, " ")} captured from authoritative source material.`, 30, roleAnchors);
+        positive(role, `Source quotation for ${role.replace(/_/g, " ")}.`, 30, roleAnchors);
       }
     }
   }
 
-  // --- Implementation proof (+25 multi-file / +10 single file)
-  if (implPaths.size >= 2) {
-    positive(
-      "multi_file_implementation",
-      `Implementation proved across ${implPaths.size} files.`,
-      25,
-      implAnchors,
-    );
-  } else if (implPaths.size === 1) {
-    positive("single_file_implementation", "Implementation proved in one file only.", 10, implAnchors);
-  }
-
-  // --- Framework convention proof (+15)
-  const conventionAnchors = implAnchors.filter((a) => CONVENTION_PATH_PATTERN.test(a.path));
-  if (conventionAnchors.length > 0) {
-    positive(
-      "framework_convention_proof",
-      "Evidence sits in conventional framework files.",
-      15,
-      conventionAnchors,
-    );
-  }
-
-  // --- Runtime flow proof (+15): server + client sides both proved.
-  const serverProved = [...provedRoles].some((r) => /server|http|route_protection/.test(r));
-  const clientProved = [...provedRoles].some((r) => /client/.test(r));
-  const distinctImplRoles = new Set(implAnchors.map((a) => a.role));
-  if ((serverProved && clientProved) || distinctImplRoles.size >= 3) {
-    positive("runtime_flow_proof", "Server and client sides of the flow are both proved.", 15);
-  }
-
   // --- Env/deployment docs (+10)
-  const docsAnchors = partial.filter((a) => a.role === "docs_reference");
+  const docsAnchors = anchors.filter((a) => a.role === "docs_reference");
   const envAnchors = proved.filter((a) => /env/.test(a.role));
   if (docsAnchors.length > 0 || envAnchors.length > 0) {
     positive("env_deployment_docs", "Environment/deployment documentation present.", 10, [
@@ -202,8 +168,7 @@ export function scoreCandidate(
 
   const toyish =
     hasCandidateSignal("toy") ||
-    TOY_NAME_PATTERN.test(candidate.name) ||
-    (implPaths.size >= 1 && candidate.matchedPaths.length <= 1 && !hasDependencyProof);
+    TOY_NAME_PATTERN.test(candidate.name);
   if (toyish) {
     negative("toy_demo", "Repo looks like a minimal demo.", -20);
     rejectionReasons.push("toy_demo");
@@ -234,7 +199,7 @@ export function scoreCandidate(
     (r) => r.key === "dependency_proof" && r.required,
   );
   if (requiresDependencyProof && !hasDependencyProof) rejectionReasons.push("no_dependency_proof");
-  if (!isResearchSpec && implPaths.size === 0) rejectionReasons.push("no_implementation_files");
+  if (!isResearchSpec) rejectionReasons.push("no_implementation_files");
 
   // --- Score: clamp to [0, 1]; cap without exact evidence.
   let score = Math.max(0, Math.min(100, total)) / 100;
@@ -243,8 +208,6 @@ export function scoreCandidate(
   const cls = classify({
     candidate,
     hasDependencyProof,
-    implPathCount: implPaths.size,
-    productionShaped,
     docsOnly,
     docsReference: docsAnchors.length > 0,
     toyish,
@@ -274,8 +237,6 @@ export function scoreCandidate(
 interface ClassifyInput {
   candidate: CandidateRepo;
   hasDependencyProof: boolean;
-  implPathCount: number;
-  productionShaped: boolean;
   docsOnly: boolean;
   docsReference: boolean;
   toyish: boolean;
@@ -288,8 +249,6 @@ interface ClassifyInput {
 function classify(input: ClassifyInput): CandidateClass {
   const {
     hasDependencyProof,
-    implPathCount,
-    productionShaped,
     docsOnly,
     docsReference,
     toyish,
@@ -311,16 +270,16 @@ function classify(input: ClassifyInput): CandidateClass {
   }
   if (docsOnly && docsReference) return "docs";
   if (toyish) return "toy";
-  if (isTemplateName && (implPathCount > 0 || hasDependencyProof)) return "template";
-  if (hasDependencyProof && implPathCount >= 2 && productionShaped) return "production";
-  if (implPathCount >= 1 || hasDependencyProof) return "reference";
+  if (isTemplateName && hasDependencyProof) return "template";
+  if (hasDependencyProof) return "reference";
   if (docsReference) return "docs";
   return "unknown";
 }
 
 function nextAction(score: number, cls: CandidateClass): NextAction {
   if (cls === "false_positive" || score < 0.25) return "reject";
-  if (score >= 0.85) return "extract";
+  // Extraction patterns remain disabled until a method can support behavior.
+  if (score >= 0.85) return "read_more";
   if (score >= 0.5) return "read_more";
   if (cls === "docs" || cls === "reference" || cls === "template" || cls === "toy") {
     return "read_more";

@@ -9,9 +9,10 @@ import type {
   RepoSearchQuery,
   RepoSearchResult,
   RepoTree,
+  ProviderSearchCapabilities,
 } from "./EvidenceProvider.js";
 import type { SearchProbe } from "../schemas/index.js";
-import { providerNotConfigured } from "../core/errors.js";
+import { providerNotConfigured, ResearchError } from "../core/errors.js";
 
 /**
  * Octocode MCP tool caller. The orchestrator does not embed an MCP client —
@@ -44,6 +45,17 @@ const NOT_CONFIGURED_HINT =
  */
 export class OctocodeEvidenceProvider implements EvidenceProvider {
   readonly name = "octocode" as const;
+  searchCapabilities(): ProviderSearchCapabilities {
+    return {
+      capabilityVersion: "octocode-gh-search-tools-v1",
+      revisionPinning: false,
+      supportedQualifiers: { codeSearch: [], repoSearch: [] },
+      codeSearch: true,
+      repoSearch: true,
+      issues: false,
+      batch: { codeSearch: true, repoSearch: false, maxCodeQueriesPerCall: 5 },
+    };
+  }
   private readonly config: OctocodeEvidenceProviderConfig;
 
   constructor(config: OctocodeEvidenceProviderConfig = {}) {
@@ -79,6 +91,7 @@ export class OctocodeEvidenceProvider implements EvidenceProvider {
           concise: false,
         })),
       })) as OctocodeSearchResponse;
+      throwIfSearchFailed(raw);
       results.push(...normalizeSearchResponse(raw, batch));
     }
     return results;
@@ -101,6 +114,7 @@ export class OctocodeEvidenceProvider implements EvidenceProvider {
         },
       ],
     })) as OctocodeRepoSearchResponse;
+    throwIfSearchFailed(raw);
     return normalizeRepoSearchResponse(raw);
   }
 
@@ -132,7 +146,7 @@ export class OctocodeEvidenceProvider implements EvidenceProvider {
     return {
       provider: "octocode",
       repo: input.repo,
-      path: input.path,
+      path: file?.path ?? input.path,
       ref: input.ref,
       content: file?.content,
       unavailableReason: file?.error ?? providerErrorText(modernResult?.error),
@@ -167,6 +181,7 @@ export class OctocodeEvidenceProvider implements EvidenceProvider {
 }
 
 interface LegacySearchEntry {
+  error?: unknown;
   queryId?: string;
   repository?: string;
   repo?: string;
@@ -205,9 +220,9 @@ interface OctocodeRepoSearchResponse {
 }
 
 interface OctocodeFileResponse {
-  files?: Array<{ content?: string; error?: string }>;
+  files?: Array<{ path?: string; content?: string; error?: string }>;
   results?: Array<{
-    data?: { files?: Array<{ content?: string; error?: string }> };
+    data?: { files?: Array<{ path?: string; content?: string; error?: string }> };
     error?: unknown;
   }>;
 }
@@ -307,6 +322,17 @@ function providerErrorText(error: unknown): string | undefined {
   if (typeof error === "string") return error;
   if (error && typeof error === "object" && "message" in error) return String(error.message);
   return error === undefined ? undefined : JSON.stringify(error);
+}
+
+function throwIfSearchFailed(raw: { results?: Array<{ error?: unknown }> }): void {
+  const error = raw.results?.find((result) => result.error !== undefined)?.error;
+  if (error === undefined) return;
+  const message = providerErrorText(error) ?? "Octocode search request failed.";
+  const status = typeof error === "object" && error && "status" in error ? Number((error as { status: unknown }).status) : Number(message.match(/\b(401|403|404)\b/)?.[1]);
+  if ([401, 403, 404].includes(status)) {
+    throw new ResearchError("access_denied", message, { recoverable: false, suggestedAction: "Check the requested repository and existing caller access; no provider or credential fallback will be attempted." });
+  }
+  throw new ResearchError("incomplete_results", message, { recoverable: true });
 }
 
 /** Turn a quoted probe query into Octocode AND-terms. */

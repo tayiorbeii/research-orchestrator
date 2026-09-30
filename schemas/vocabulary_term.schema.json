@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/vocabulary_term.schema.json",
+  "title": "VocabularyTerm",
+  "type": "object",
+  "required": ["id", "text", "questionIds", "kind", "origin", "status"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "text": { "type": "string", "minLength": 1 },
+    "questionIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "mechanismId": { "type": "string" },
+    "kind": { "enum": ["package", "symbol", "import_path", "config_key", "cli_token", "domain_phrase", "repository_identity"] },
+    "origin": { "enum": ["user_supplied", "local_artifact_derived", "remote_source_derived", "bundled_mapping", "planner_hypothesis"] },
+    "sourceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "canonicalTerm": { "type": "string" },
+    "relation": { "enum": ["alias", "package-for", "command-for", "config-for", "predecessor-of", "alternative-to"] },
+    "versions": { "type": "array", "items": { "type": "string" } },
+    "languages": { "type": "array", "items": { "type": "string" } },
+    "ambiguityNotes": { "type": "array", "items": { "type": "string" } },
+    "proposedQualifiers": { "type": "array", "items": { "type": "string" } },
+    "egress": { "enum": ["public", "restricted"] },
+    "status": { "enum": ["proposed", "observed"] }
+  },
+  "additionalProperties": false
+}

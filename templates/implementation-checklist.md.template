@@ -36,3 +36,6 @@
 
 - [ ] README or internal docs updated.
 - [ ] Risks/open questions resolved or accepted.
+- [ ] Every supported claim has a cited source observation and bounded scope.
+- [ ] Synthetic mock evidence is visibly labeled and has not been described as live research.
+- [ ] Required questions left untouched or unresolved are carried into the handoff.

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/repo_explanation_result.schema.json",
+  "title": "RepoExplanationResult",
+  "oneOf": [
+    { "type": "object", "required": ["repo", "status", "explanation"], "properties": { "repo": { "type": "string", "minLength": 1 }, "status": { "const": "succeeded" }, "explanation": { "$ref": "research_run.schema.json#/properties/explanations/items" } } },
+    { "type": "object", "required": ["repo", "status", "error"], "properties": { "repo": { "type": "string", "minLength": 1 }, "status": { "const": "failed" }, "error": { "type": "string", "minLength": 1 }, "errorClass": { "type": "string" } } }
+  ]
+}

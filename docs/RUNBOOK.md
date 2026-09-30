@@ -21,7 +21,7 @@ source (`src/cli.ts`, `package.json`, `bridges/`).
 
 | Requirement | Version | Notes |
 | --- | --- | --- |
-| **Node.js** | **20 LTS or newer** (tested on 24.x) | ESM project (`"type": "module"`), NodeNext resolution. Node 18 works but 20+ is recommended. |
+| **Node.js** | **24.x** | Current validation runtime; ESM project (`"type": "module"`), NodeNext resolution. |
 | **npm** | 10+ (ships with Node) | Used for install + scripts. `pnpm`/`yarn` work but commands below use `npm`. |
 | **Git** | any recent | Only needed to clone. |
 | **TypeScript runner** | bundled (`tsx` devDep) | No global installs required. |
@@ -66,6 +66,10 @@ The npm helper `npm run cli -- <args>` is shorthand for `tsx src/cli.ts <args>`
 ```
 Usage:
   research-orchestrator find --goal "<goal>" --out <dir> [options]
+  research-orchestrator plan --request <request.json> --out <brief.json>
+  research-orchestrator plan --brief <draft.json> --submit <submission.json> --out <revised.json>
+  research-orchestrator find --brief <brief.json> --out <dir> [options]
+  research-orchestrator find --resume <run-id> --brief <brief.json> --out <dir> [options]
   research-orchestrator eval [--out <file.json>]
   research-orchestrator mcp
   research-orchestrator --help
@@ -85,6 +89,24 @@ Turns a goal into grounded planning artifacts.
 | `--max-repos-to-prove <n>` | — | unset | Cap deep proof reads (limits Octocode calls / cost). |
 | `--no-cache` | — | off | Skip reading/writing `.research-cache/`. |
 | `--allow-inconclusive` | — | off | Exit `0` for an inconclusive run instead of `2`. |
+| `--brief <file>` | — | — | Execute a structured, validated research brief. |
+| `--resume <run-id>` | — | — | Carry prior budget consumption forward; requires `--brief`. |
+
+Brief runs allocate the first query opportunity to each required question, then
+send additional queries and candidate reads toward questions with fewer useful
+search leads. The shared ledger counts logical query units once, physical
+requests separately, and file reads across repositories. When limits or the
+deadline leave work unfinished, `budgetLedger.exhaustion` identifies affected
+questions, repositories, and referenced files with reasons. Search outcomes
+distinguish empty results, transport failures, access denials, and provider
+pagination limits. Access denials are not retried or routed through another
+provider.
+
+An empty scoped search may receive one bounded broadening probe when query and
+refinement budget remain. The original and revised probes remain in history;
+transport failures are not rewritten. Resume carries consumption, skips probes
+already attempted, re-reads source leads before current claim assessment, and
+requires the same provider and evidence policy as the parent run.
 
 **Exit codes:** `0` for a complete run (or an explicitly allowed inconclusive
 run), `2` when research is inconclusive, and `1` on an execution/configuration
@@ -97,14 +119,62 @@ error. Structured `ResearchError` failures are printed to stderr.
 > absence. Add structured `hints` (`requiredConcepts`, `likelyFiles`, and
 > `proofRequirements`) as shown in §13 when domain vocabulary needs correction.
 
+`find --goal` is now a compatibility path through the same conservative brief
+engine. This intentionally tightens old behavior: vague input returns
+`needs_input` rather than issuing generic word searches. Exit code `2` marks
+`needs_input` unless `--allow-inconclusive` is set; invalid briefs exit `1` and
+include issue codes. No provider calls occur for a `needs_input` brief.
+
+### `plan` — prepare a brief without researching
+
+The request JSON contains a `goal` and may include structured questions,
+vocabulary, seeds, source policy, and budgets. `plan` writes the brief to
+`--out` and prints readiness plus question-scoped lookup needs. It does not
+imply that web research or vocabulary lookups happened. For an abstract goal,
+the host can perform approved lookups and submit acquired terms plus successful
+and failed lookup receipts as a new brief revision:
+
+```json
+{"goal":"Find examples using the Acme API"}
+```
+
+```sh
+npx tsx src/cli.ts plan --request request.json --out brief.json
+npx tsx src/cli.ts plan --brief brief.json --submit submission.json --out revised-brief.json
+npx tsx src/cli.ts find --brief revised-brief.json --out .research/run --mode mock
+```
+
+The submission JSON has `terms` and `lookupOutcomes`. A term needs a
+`sourceRefs` entry matching a successful outcome for its question to become
+`observed`; otherwise it stays a proposed hypothesis. Failed or denied lookups
+remain planning gaps. The revision preserves every original question statement
+and records its parent brief id/revision. `plan --request` may include only
+explicit local artifact paths or inline snippets; private fingerprints are
+restricted from provider probes unless the request explicitly allows them.
+
+Resume carries engine consumption forward into a new run linked to its parent.
+Larger limits must appear explicitly in the revised brief. Host-performed
+reconnaissance is provenance and is not measured or charged by the engine.
+
 ### `eval` — run the benchmark harness
 
 ```bash
 npx tsx src/cli.ts eval [--out report.json]
 ```
 
-Runs the golden benchmark tasks and prints a JSON report to stdout (and to
-`--out` if given).
+Runs the frozen synthetic replay corpus and prints separate per-task and total
+metrics to stdout (and to `--out` if given). Confirmed flags: optional
+`--out <file.json>` only. The report names the mock replay lane, lists tuning and
+held-out fixtures, and is not a live-provider evaluation. The replay never
+selects a live provider. Run `npm run eval` for the supported package command.
+
+The committed corpus contains library API invocation, bounded retry and
+cancellation, projection rebuilding, advertised versus proposed tool features,
+a mixed request, and an under-specified request. Three fixtures are held out
+from tuning: review-tool capabilities, the mixed request, and the
+under-specified request. A known source-kind defect is preserved in the
+feature-exploration labels and reported explicitly until the parallel fix is
+integrated.
 
 ### `mcp` — start the MCP server (stdio)
 
@@ -113,8 +183,9 @@ npx tsx src/cli.ts mcp
 ```
 
 Starts a stdio MCP server (server name `research-orchestrator` v0.1.0) exposing
-four tools: **`findImplementations`**, **`scoreRepos`**,
-**`explainRepoPattern`**, **`writePlanArtifact`**. See §10 for client wiring.
+five tools: **`research.planResearch`**, **`research.findImplementations`**,
+**`research.scoreRepos`**, **`research.explainRepoPattern`**, and
+**`research.writePlanArtifact`**. See §10 for client wiring.
 
 ### `--help`
 
@@ -129,12 +200,13 @@ npx tsx src/cli.ts            # no args also prints help (exits 1)
 
 | Mode | Network? | Config needed | What it does |
 | --- | --- | --- | --- |
-| **`mock`** (default) | ❌ none | none | Deterministic `MockEvidenceProvider`. Identical output every run. **Start here.** |
+| **`mock`** (default) | ❌ none | none | Deterministic synthetic fixture evidence; it is not live repository research. **Start here for offline validation.** |
 | **`octocode`** | ✅ live | env vars (see §7) | Real `OctocodeEvidenceProvider` over the live bridge. Searches/proves against public repos. |
 | **`github`** | ✅ live | `gh auth login` or `GITHUB_TOKEN`/`GH_TOKEN` | Built-in GitHub REST provider. |
 
 Mock mode is the only mode that works with zero configuration. Use it to verify
-your install, iterate on prompts/templates, and run the test suite.
+your install, iterate on prompts/templates, and run the test suite. Every run
+and artifact labels mock evidence as synthetic.
 
 ---
 
@@ -349,7 +421,8 @@ It speaks MCP over stdio and exposes:
 
 | Tool | Purpose |
 | --- | --- |
-| `findImplementations` | Run the research pipeline for a goal. |
+| `research.planResearch` | Draft or validate a brief and return vocabulary needs without provider calls. |
+| `research.findImplementations` | Execute a brief or conservative goal input; supports resume and budget overrides. |
 | `scoreRepos` | Score candidate repos against a feature spec. |
 | `explainRepoPattern` | Extract the implementation pattern from evidence. |
 | `writePlanArtifact` | Render a plan/checklist from a research run. |
@@ -405,6 +478,8 @@ proof reads can take minutes.
       "lifecycle": "keep-alive",
       "requestTimeoutMs": 300000,
       "directTools": [
+        "research.planResearch",
+        "research.findImplementations",
         "research.scoreRepos",
         "research.explainRepoPattern",
         "research.writePlanArtifact"
@@ -418,21 +493,18 @@ Notes:
 
 - Point `args[0]` at the kit checkout that has a current `dist/` build
   (`npm run build` inside the kit first).
-- `directTools` registers the three exposed `research.*` tools —
+- `directTools` registers the exposed `research.*` tools —
   `research.scoreRepos`, `research.explainRepoPattern`, and
   `research.writePlanArtifact` — individually instead of behind the proxy, so
-  the agent can call them like native tools. `research.findImplementations` is
-  intentionally not exposed: a full run is a multi-minute batch job that
-  exceeds MCP request timeouts, so the CLI is the path for full runs
-  (`research-orchestrator find`, installed globally via `npm link`).
+  the agent can call them like native tools. Long live runs may still exceed a
+  host's request timeout; use the CLI when that applies.
 - If the bridge env is missing, octocode-backed calls fail with
   `stdio transport requires RESEARCH_OCTOCODE_COMMAND` — the kit `.env`
   supplies it; explicit `env` in this entry overrides it.
 - Restart Pi (or reconnect the server) after editing `mcp.json`, then verify
-  with the MCP tool list: the server should expose `research.scoreRepos`,
-  `research.explainRepoPattern`, and `research.writePlanArtifact`
-  (`research.findImplementations` is registered server-side but deliberately
-  not exposed — full runs go through the CLI).
+  with the MCP tool list: the server should expose `research.planResearch`,
+  `research.findImplementations`, `research.scoreRepos`,
+  `research.explainRepoPattern`, and `research.writePlanArtifact`.
 
 In Pi specifically, Octocode itself is CLI-only (`octocode-research` skill);
 do not expect `mcp:octocode/*` tools. Route GitHub evidence through the

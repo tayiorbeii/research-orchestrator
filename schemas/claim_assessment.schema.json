@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/claim_assessment.schema.json",
+  "title": "ClaimAssessment",
+  "type": "object",
+  "required": ["claimId", "questionId", "subject", "assertion", "requiredObservationIds", "status", "method", "assessorOrigin", "evidencePolicyVersion", "rationale", "remainingObligations", "limitations"],
+  "properties": {
+    "claimId": { "type": "string", "minLength": 1 }, "questionId": { "type": "string", "minLength": 1 },
+    "subject": { "type": "object", "required": ["repo"], "properties": { "repo": { "type": "string", "minLength": 1 }, "revision": { "type": "string" } } },
+    "assertion": { "type": "string", "minLength": 1 }, "requiredObservationIds": { "type": "array", "items": { "type": "string" } },
+    "status": { "enum": ["supported", "partial", "unsupported", "contradicted", "not_assessed"] },
+    "method": { "enum": ["exact_source_quotation", "dependency_declaration", "config_value", "workflow_command"] },
+    "assessorOrigin": { "enum": ["engine", "external", "legacy"] }, "evidenceOrigin": { "enum": ["live", "synthetic"] }, "evidencePolicyVersion": { "type": "string", "enum": ["phase1_exact_quotation_v1", "phase2_claim_evidence_v2", "legacy_unvalidated"] },
+    "rationale": { "type": "string" }, "remainingObligations": { "type": "array", "items": { "type": "string" } },
+    "limitations": { "type": "array", "items": { "type": "string" } }
+  }
+}

@@ -2,7 +2,7 @@ import type {
   CandidateRepo,
   EvidenceAnchor,
   FeatureSpec,
-  ResearchRun,
+  ResearchRunV2,
   ScoredCandidate,
   SearchProbe,
 } from "../schemas/index.js";
@@ -12,6 +12,15 @@ import { generateSearchProbes } from "./generateSearchProbes.js";
 import { collectEvidence } from "./collectEvidence.js";
 import { scoreCandidate } from "./scoreCandidate.js";
 import { extractPattern, type ExtractedPattern } from "./extractPattern.js";
+import { RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION } from "./evidencePolicy.js";
+import { candidateClaims, deriveCoverage, questionsFromFeatureSpec } from "./assessment/coverage.js";
+import { renderTargetAssertion } from "./assessment/types.js";
+import { claimAssessorRegistry } from "./assessment/types.js";
+import type { CandidateState, ClaimAssessment, SourceObservation } from "../schemas/researchContracts.js";
+import type { ResearchBrief } from "../schemas/researchBrief.js";
+import { draftBriefFromGoal } from "./brief/draftBriefFromGoal.js";
+import { validateBrief } from "./brief/validateBrief.js";
+import { executeBrief } from "./brief/executeBrief.js";
 
 export interface RunResearchOptions {
   goal: string;
@@ -25,9 +34,16 @@ export interface RunResearchOptions {
 }
 
 export interface RunResearchResult {
-  run: ResearchRun;
+  run: ResearchRunV2;
   evidence: EvidenceAnchor[];
   pattern: ExtractedPattern;
+}
+
+/** The shared legacy goal adapter used by CLI and MCP goal inputs. */
+export async function runPipeline(options: Omit<RunResearchOptions, "hints"> & { hints?: Partial<ResearchBrief> }): Promise<ResearchRunV2> {
+  const draft = draftBriefFromGoal(options.goal, options.hints);
+  const validated = validateBrief(draft);
+  return executeBrief(validated.brief, { provider: options.provider, now: options.now, deterministic: options.deterministic, maxCandidates: options.maxCandidates, maxReposToProve: options.maxReposToProve });
 }
 
 const DETERMINISTIC_CREATED_AT = "2026-06-30T00:00:00.000Z";
@@ -40,6 +56,7 @@ const DETERMINISTIC_CREATED_AT = "2026-06-30T00:00:00.000Z";
 export async function runResearch(options: RunResearchOptions): Promise<RunResearchResult> {
   const warnings: string[] = [];
   const now = options.now ?? (() => new Date());
+  const observationClock = options.deterministic ? () => new Date(DETERMINISTIC_CREATED_AT) : now;
   const featureSpec = normalizeFeatureSpec(options.goal, options.hints);
   const probes = generateSearchProbes(featureSpec);
 
@@ -100,14 +117,16 @@ export async function runResearch(options: RunResearchOptions): Promise<RunResea
 
   // Evidence + scoring.
   const evidence: EvidenceAnchor[] = [];
+  const observations: SourceObservation[] = [];
   const scoredCandidates: ScoredCandidate[] = [];
   const proveLimit = options.maxReposToProve ?? limited.length;
   for (let i = 0; i < limited.length; i += 1) {
     const candidate = limited[i]!;
     let anchors: EvidenceAnchor[] = [];
     if (i < proveLimit) {
-      const collected = await collectEvidence(options.provider, featureSpec, candidate);
+      const collected = await collectEvidence(options.provider, featureSpec, candidate, observationClock);
       anchors = collected.anchors;
+      observations.push(...collected.observations);
       warnings.push(...collected.warnings);
       evidence.push(...anchors);
     } else {
@@ -123,7 +142,81 @@ export async function runResearch(options: RunResearchOptions): Promise<RunResea
 
   const pattern = extractPattern(featureSpec, scoredCandidates, evidence);
 
-  const run: ResearchRun = {
+  const candidateStates: CandidateState[] = limited.map((candidate) => {
+    const repoObservations = observations.filter((observation) => observation.repo === candidate.repo);
+    const assessed = repoObservations.length > 0;
+    return {
+      repo: candidate.repo,
+      state: !assessed ? "uninspected" as const
+        : repoObservations.some((observation) => observation.readStatus === "complete" || observation.readStatus === "partial")
+          ? "inspected" as const : "unavailable" as const,
+      ...(!assessed && limited.indexOf(candidate) >= proveLimit ? { reason: "Proof-read limit reached." } : {}),
+    };
+  });
+  const assessments: ClaimAssessment[] = candidateClaims(featureSpec, limited.map((candidate) => candidate.repo)).flatMap((baseClaim) => {
+    const requirement = featureSpec.proofRequirements.find((item) => `question_${item.key}` === baseClaim.questionId)!;
+    const repoObservations = observations.filter((observation) => observation.repo === baseClaim.subject.repo);
+    const roleAnchors = evidence.filter((anchor) => anchor.repo === baseClaim.subject.repo && anchor.role === requirement.key);
+    const supportingPath = repoObservations.find((observation) =>
+      requirement.signals.length > 0 && requirement.signals.every((signal) => observation.excerpt?.includes(signal)),
+    )?.path;
+    const projectedAnchor = roleAnchors.find((anchor) => anchor.path === supportingPath) ?? roleAnchors[0];
+    const quotationPath = supportingPath ?? projectedAnchor?.path;
+    const evidenceObservation = projectedAnchor && repoObservations.find((observation) => observation.path === projectedAnchor.path);
+    const method = requirement.key === "dependency_proof" ? "dependency_declaration" : "exact_source_quotation";
+    const packageNames = [...new Set(requirement.signals.length > 0 ? requirement.signals : featureSpec.libraries)];
+    const targets = method === "dependency_declaration" && packageNames.length > 0
+      ? packageNames.map((packageName) => ({ kind: "dependency" as const, packageName, file: "package.json" }))
+      : [{ kind: "quotation" as const, path: quotationPath, signals: requirement.signals }];
+    return targets.map((target) => {
+      const claim = {
+        ...baseClaim,
+        ...(target?.kind === "dependency" ? { claimId: `${baseClaim.claimId}_${target.packageName.replace(/[^a-zA-Z0-9_-]/g, "_")}` } : {}),
+        ...(evidenceObservation?.resolvedRevision ? { subject: { ...baseClaim.subject, revision: evidenceObservation.resolvedRevision } } : {}),
+        assertion: target ? renderTargetAssertion(target) : baseClaim.assertion,
+        ...(target ? { target } : {}),
+      };
+      const assessor = claimAssessorRegistry[method];
+      if (assessor) return assessor(claim, evidenceObservation && projectedAnchor
+        ? repoObservations.map((observation) => observation.id === evidenceObservation.id ? { ...observation, anchor: projectedAnchor } : observation)
+        : repoObservations);
+      return {
+        claimId: claim.claimId, questionId: claim.questionId, subject: claim.subject, assertion: claim.assertion,
+        requiredObservationIds: repoObservations.map((observation) => observation.id), status: "not_assessed", method: method as ClaimAssessment["method"],
+        assessorOrigin: "engine", evidencePolicyVersion: RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION,
+        rationale: `No engine assessor is registered for ${method}.`,
+        remainingObligations: ["Register a bounded assessor for this claim method."], limitations: [],
+      };
+    });
+  });
+  for (const state of candidateStates) {
+    if (state.state === "inspected") {
+      const requiredQuestions = questionsFromFeatureSpec(featureSpec);
+      state.state = requiredQuestions.length > 0 && requiredQuestions.every((question) =>
+        assessments.some((assessment) => assessment.subject.repo === state.repo && assessment.questionId === question.questionId && assessment.status === "supported" && assessment.assessorOrigin === "engine"),
+      )
+        ? "eligible" : "ineligible";
+    }
+  }
+  const { coverage, outcome: baseOutcome } = deriveCoverage({
+    spec: featureSpec, candidates: limited.map((candidate) => candidate.repo), states: candidateStates,
+    observations, assessments,
+  });
+  const outcome = {
+    ...baseOutcome,
+    reasons: [...baseOutcome.reasons,
+      ...(limited.length === 0 ? ["no_candidates"] : []),
+      ...(selectedRepos.length === 0 ? ["no_selected_repositories"] : []),
+      ...(observations.length === 0 ? ["no_evidence_anchors"] : []),
+      ...(warnings.some((warning) => /\[provider_search_failed\]|Provider code search failed/i.test(warning)) ? ["provider_search_failed"] : []),
+    ],
+  };
+
+  const run: ResearchRunV2 = {
+    schemaVersion: 2,
+    evidencePolicyVersion: RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION,
+    providerName: options.provider.name,
+    evidenceOrigin: options.provider.name === "mock" ? "synthetic_mock" : "repository_observation",
     id: options.deterministic
       ? `run_mock_${featureSpec.featureKey.replace(/-/g, "_")}`
       : `run_${featureSpec.featureKey.replace(/-/g, "_")}_${now().getTime()}`,
@@ -137,6 +230,12 @@ export async function runResearch(options: RunResearchOptions): Promise<RunResea
     explanations: [],
     artifacts: [],
     warnings: [...new Set(warnings)],
+    observations,
+    assessments,
+    coverage,
+    outcome,
+    candidateStates,
+    explanationResults: [],
   };
 
   return { run, evidence, pattern };

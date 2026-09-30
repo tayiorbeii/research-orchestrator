@@ -26,6 +26,11 @@ function anchor(overrides: Partial<EvidenceAnchor> & { path: string; role: strin
     provider: "mock",
     repo: "acme/app",
     proofLevel: "proved",
+    startLine: 1,
+    endLine: 1,
+    matchText: "source excerpt",
+    evidencePolicyVersion: "phase1_exact_quotation_v1",
+    supportMethod: "exact_source_quotation",
     ...overrides,
   };
 }
@@ -38,15 +43,15 @@ const fullEvidence: EvidenceAnchor[] = [
 ];
 
 describe("scoreCandidate", () => {
-  it("classifies a fully-proved, production-shaped repo as production", () => {
+  it("does not classify a repo as production from exact quotations alone", () => {
     const c = candidate({
       matchedPaths: ["package.json", "convex/auth.ts", "app/login/page.tsx", "middleware.ts"],
     });
     const scored = scoreCandidate(spec, c, fullEvidence);
-    expect(scored.class).toBe("production");
-    expect(scored.score).toBeGreaterThanOrEqual(0.85);
-    expect(scored.nextAction).toBe("extract");
-    expect(scored.missingProof).toEqual([]);
+    // Phase 1 quotations establish source text, not working implementation behavior.
+    expect(scored.class).not.toBe("production");
+    expect(scored.score).toBeLessThan(0.85);
+    expect(scored.positiveSignals.map((s) => s.key)).not.toContain("multi_file_implementation");
   });
 
   it("classifies a small proved example as reference", () => {
@@ -78,6 +83,7 @@ describe("scoreCandidate", () => {
       matchedPaths: ["package.json", "convex/auth.ts", "app/login/page.tsx", "middleware.ts"],
     });
     const scored = scoreCandidate(spec, c, fullEvidence);
+    // The template label comes from repository metadata, not a claim of support.
     expect(scored.class).toBe("template");
   });
 

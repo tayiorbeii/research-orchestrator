@@ -338,6 +338,9 @@ const STOPWORDS = new Set([
   "develop", "build", "create", "make", "generate", "write", "produce", "design",
   "implement", "add", "support", "enable", "allow", "provide", "include",
   "find", "look", "search", "get", "set", "use", "using", "used", "run", "running",
+  "proven", "repository", "repositories", "implementation", "implementations", "real-world",
+  "migrate", "migrated", "migrating",
+  "task", "goal", "request", "question", "answers", "sources", "source", "package",
   "existing", "current", "new", "old", "safe", "unsafe", "good", "best",
   "app", "application", "project", "code", "file", "files", "data", "value",
   "values", "example", "examples", "case", "cases", "way", "ways", "thing",
@@ -372,6 +375,11 @@ const DOMAIN_NOUNS = new Set([
   "stream", "streaming", "websocket", "upload", "storage", "render", "rendering",
   "state", "store", "context", "service", "services", "client", "server",
   "database", "deployment", "ci", "test", "tests", "benchmark", "benchmarks",
+  // Common analysis tools and mechanisms, including lowercase package names.
+  "ruff", "mypy", "pyright", "semgrep", "ast", "lint", "strict", "gradual",
+  "baseline", "baselines", "changed-line", "changed", "coverage", "parity",
+  "pre-commit", "pre-review", "checks", "forbidden", "sensitive", "logging",
+  "imports", "vendor", "custom",
 ]);
 
 /**
@@ -416,10 +424,11 @@ function isKeyToken(token: string): boolean {
   if (/[0-9]/.test(token)) return true; // version/suffix digit: iTerm2
   if (/^[A-Z][a-z]/.test(token) && token.length > 3) return true; // Capitalized name: Flowdeck
   if (DOMAIN_NOUNS.has(token.toLowerCase())) return true; // behavior noun
+  if ([...STACKS, ...PROVIDERS].some((entry) => [entry.name, entry.token, ...entry.packages].some((name) => name.toLowerCase() === token.toLowerCase()))) return true;
   // Unknown lowercase content words may be product names (wezterm, kubernetes,
   // nomad). Stopwords were removed before this check; generic/noise terms are
   // filtered when proof requirements are built.
-  return /^[a-z][a-z0-9.+]*$/i.test(token) && token.length > 2;
+  return false;
 }
 
 /**
@@ -427,8 +436,12 @@ function isKeyToken(token: string): boolean {
  * preserving original case and hyphenated compounds. Deterministic and ordered
  * by first appearance so the same goal always yields the same terms.
  */
-export function extractKeyTerms(goal: string, max = 16): string[] {
-  const cleaned = goal.replace(/[^A-Za-z0-9\s.+-]/g, " ");
+export function extractKeyTerms(goal: string, max = 64): string[] {
+  // Keep technical forms intact: scoped packages, paths, config keys, and
+  // dotted APIs are more useful anchors than fragments of those identifiers.
+  const cleaned = goal.replace(/@[\w.-]+\/[\w./-]+|(?:[\w.-]+\/)+[\w.-]+|[\w$-]+(?:\.[\w$-]+)+|[^A-Za-z0-9_@$./\s+-]/g, (match) =>
+    /^(?:@[\w.-]+\/|(?:[\w.-]+\/)+|[\w$-]+\.)/.test(match) ? ` ${match} ` : " ",
+  );
   const terms: string[] = [];
   const seen = new Set<string>();
   const push = (term: string): void => {
@@ -437,8 +450,17 @@ export function extractKeyTerms(goal: string, max = 16): string[] {
     seen.add(key);
     terms.push(term);
   };
-  for (const token of cleaned.split(/\s+/).filter(Boolean)) {
+  for (const rawToken of cleaned.split(/\s+/).filter(Boolean)) {
+    const token = rawToken.replace(/[.,;:!?]+$/g, "");
+    if (!token) continue;
     if (isStopToken(token)) continue;
+    if (/^@[\w.-]+\/[\w./-]+$/.test(token) || /^(?:[\w.-]+\/)+[\w.-]+$/.test(token) || /[./]/.test(token)) {
+      push(token);
+      for (const part of token.split(/[/.]/).filter(Boolean)) {
+        if (!isStopToken(part) && (isKeyToken(part) || DOMAIN_NOUNS.has(part.toLowerCase()))) push(part);
+      }
+      continue;
+    }
     if (token.includes("-")) {
       push(token);
       continue;
@@ -460,9 +482,10 @@ export function looksLikeProperNoun(term: string): boolean {
   // Lowercase hyphenated compounds are usually behavior qualifiers
   // (keyboard-only, coding-agent), not product names.
   if (term.includes("-")) return false;
-  // Lowercase unknown nouns are treated as entity candidates. This favors
-  // recall; research proof still requires exact, line-level evidence.
-  return /^[a-z][a-z0-9.+]*$/.test(term) && term.length > 2;
+  // Lowercase terms are entities only when a bundled mapping recognizes them.
+  // Arbitrary goal words must not become product/repository searches.
+  const mappedNames = [...STACKS, ...PROVIDERS].flatMap((entry) => [entry.name, ...entry.packages]);
+  return mappedNames.some((name) => name.toLowerCase() === lower);
 }
 
 /** Split key terms into named products vs. behavior concepts. */

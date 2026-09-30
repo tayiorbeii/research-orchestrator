@@ -1,5 +1,11 @@
 # 07 Data Models
 
+The structures below include compatibility projections. New executions use
+`ResearchRunV2`: a versioned brief plus observations, assessments, coverage,
+provider outcomes, and a budget ledger. Legacy runs without an
+`evidencePolicyVersion` are read as `legacy_unvalidated`; importing old proof
+flags never upgrades historical evidence.
+
 ## FeatureSpec
 
 ```ts
@@ -172,6 +178,18 @@ type ResearchRun = {
   warnings: string[];
 };
 ```
+
+## Research brief and v2 evidence ledger
+
+`ResearchBrief` records the goal, required questions and fact obligations,
+intent hints, vocabulary provenance, source kinds, and explicit budgets.
+`ResearchRunV2` adds source observations, claim assessments, per-question
+coverage, provider outcomes, candidate states, and the final run outcome. See
+the matching JSON Schema files in `schemas/`; the schema contract test checks
+required keys and enums for every Zod schema exported from `src/schemas/index.ts`.
+
+The mock provider and all committed replay fixtures are synthetic. Their
+receipts carry a synthetic origin and are not live repository results.
 
 ## ArtifactRef
 

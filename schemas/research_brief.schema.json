@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/research_brief.schema.json",
+  "title": "ResearchBrief",
+  "type": "object",
+  "required": ["id", "revision", "goal", "questions", "mechanisms", "vocabulary", "seeds", "allowedSourceKinds", "budgets", "readiness", "lookupOutcomes"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "revision": { "type": "integer", "minimum": 1 },
+    "goal": { "type": "string", "minLength": 1 },
+    "questions": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/question" } },
+    "languages": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "ecosystems": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "versions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "mechanisms": { "type": "array", "items": { "type": "object", "required": ["id", "description", "questionIds"], "properties": { "id": { "type": "string", "minLength": 1 }, "description": { "type": "string", "minLength": 1 }, "questionIds": { "type": "array", "items": { "type": "string", "minLength": 1 } } }, "additionalProperties": false } },
+    "vocabulary": { "type": "array", "items": { "$ref": "vocabulary_term.schema.json" } },
+    "seeds": { "type": "array", "items": { "type": "object", "required": ["repo", "origin"], "properties": { "repo": { "type": "string", "minLength": 1 }, "origin": { "enum": ["user_supplied", "local_artifact_derived", "remote_source_derived", "planner_hypothesis"] } }, "additionalProperties": false } },
+    "allowedSourceKinds": { "type": "array", "minItems": 1, "items": { "enum": ["repository_file", "repository_metadata", "documentation_page", "issue_proposal", "local_artifact", "synthetic_fixture"] } },
+    "budgets": { "$ref": "#/$defs/budgets" },
+    "readiness": { "oneOf": [
+      { "type": "object", "required": ["status"], "properties": { "status": { "const": "ready" } }, "additionalProperties": false },
+      { "type": "object", "required": ["status", "reasons"], "properties": { "status": { "const": "needs_input" }, "reasons": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/readinessReason" } } }, "additionalProperties": false }
+    ] },
+    "lookupOutcomes": { "type": "array", "items": { "type": "object", "required": ["questionId", "sourceRef", "status", "termIdsGained"], "properties": { "questionId": { "type": "string", "minLength": 1 }, "sourceRef": { "type": "string", "minLength": 1 }, "status": { "enum": ["succeeded", "failed"] }, "termIdsGained": { "type": "array", "items": { "type": "string", "minLength": 1 } }, "detail": { "type": "string" } }, "additionalProperties": false } },
+    "lookupNeeds": { "type": "array", "items": { "type": "object", "required": ["questionId", "need", "suggestedSourceKinds", "remainingAllowance"], "properties": { "questionId": { "type": "string", "minLength": 1 }, "need": { "enum": ["vocabulary", "source"] }, "suggestedSourceKinds": { "type": "array", "items": { "enum": ["repository_file", "repository_metadata", "documentation_page", "issue_proposal", "local_artifact", "synthetic_fixture"] } }, "remainingAllowance": { "type": "integer", "minimum": 0 } }, "additionalProperties": false } },
+    "lineage": { "type": "object", "required": ["parentId", "parentRevision", "submissionId"], "properties": { "parentId": { "type": "string", "minLength": 1 }, "parentRevision": { "type": "integer", "minimum": 1 }, "submissionId": { "type": "string", "minLength": 1 } }, "additionalProperties": false },
+    "egressPolicy": { "type": "object", "required": ["allowRestrictedLocalTerms"], "properties": { "allowRestrictedLocalTerms": { "type": "boolean" } }, "additionalProperties": false }
+  },
+  "$defs": {
+    "fact": { "oneOf": [
+      { "type": "object", "required": ["kind", "packageName"], "properties": { "kind": { "const": "dependency" }, "packageName": { "type": "string", "minLength": 1 }, "constraint": { "type": "string" }, "file": { "type": "string" } }, "additionalProperties": false },
+      { "type": "object", "required": ["kind", "keyPath"], "properties": { "kind": { "const": "config" }, "keyPath": { "type": "string", "minLength": 1 }, "value": {}, "file": { "type": "string" } }, "additionalProperties": false },
+      { "type": "object", "required": ["kind", "command"], "properties": { "kind": { "const": "workflow" }, "command": { "type": "string", "minLength": 1 }, "file": { "type": "string" } }, "additionalProperties": false },
+      { "type": "object", "required": ["kind", "signals"], "properties": { "kind": { "const": "quotation" }, "path": { "type": "string" }, "signals": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }, "claimScope": { "enum": ["advertised", "proposed", "implemented"] } }, "additionalProperties": false }
+    ] },
+    "obligation": { "type": "object", "required": ["facts", "combine", "scope"], "properties": { "facts": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/fact" } }, "combine": { "enum": ["all", "any"] }, "scope": { "enum": ["same_repository", "across_examples"] } }, "additionalProperties": false },
+    "question": { "type": "object", "required": ["id", "statement", "intentHints", "required", "answerScope", "obligations"], "properties": { "id": { "type": "string", "minLength": 1 }, "statement": { "type": "string", "minLength": 1 }, "intentHints": { "type": "array", "minItems": 1, "items": { "enum": ["library_usage", "implementation_behavior", "architecture_pattern", "feature_exploration"] } }, "required": { "type": "boolean" }, "answerScope": { "type": "string", "minLength": 1 }, "obligations": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/obligation" } } }, "additionalProperties": false },
+    "readinessReason": { "type": "object", "required": ["code", "detail"], "properties": { "code": { "enum": ["missing_vocabulary", "ambiguous_target", "absent_evidence_scope", "source_access_unavailable", "too_many_questions"] }, "questionIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }, "detail": { "type": "string", "minLength": 1 } }, "additionalProperties": false },
+    "budgets": { "type": "object", "required": ["maxQuestions", "queryUnits", "reconnaissanceReads", "fileReads", "fileReadsPerRepo", "refinementRounds", "refinementProbes", "deadlineMs"], "properties": { "maxQuestions": { "type": "integer", "minimum": 0 }, "queryUnits": { "type": "integer", "minimum": 0 }, "reconnaissanceReads": { "type": "integer", "minimum": 0 }, "fileReads": { "type": "integer", "minimum": 0 }, "fileReadsPerRepo": { "type": "integer", "minimum": 0 }, "refinementRounds": { "type": "integer", "minimum": 0 }, "refinementProbes": { "type": "integer", "minimum": 0 }, "deadlineMs": { "type": "integer", "minimum": 1 } }, "additionalProperties": false }
+  },
+  "additionalProperties": false
+}

@@ -10,7 +10,10 @@ Find, score, and optionally prove repositories that implement a requested featur
 
 ```ts
 type FindImplementationsInput = {
-  goal: string;
+  goal?: string;
+  brief?: ResearchBrief;
+  resumeRunId?: string;
+  budgetOverrides?: Partial<BudgetLimits>;
   stack?: string[];
   mustHave?: string[];
   shouldHave?: string[];
@@ -27,19 +30,79 @@ type FindImplementationsInput = {
 };
 ```
 
+Supply exactly one of `goal` or `brief`. Goal input uses the same conservative
+brief adapter as the CLI. A resume requires a brief revision and carries prior
+engine consumption forward; any larger limit must be explicit in that brief or
+in `budgetOverrides`. The returned run includes its brief, compiled probes,
+per-probe outcomes, and budget ledger. Mock mode is the default and produces
+synthetic fixture evidence; request `octocode` or `github` explicitly for live
+providers. Provider selection is never silently changed.
+
 ### Output
 
 ```ts
 type FindImplementationsOutput = {
   runId: string;
+  mode: "mock" | "octocode" | "github" | "hybrid";
+  provider: string;
+  evidenceOrigin: "repository_observation" | "synthetic_mock" | "legacy_unvalidated";
   featureSpec: FeatureSpec;
   probes: SearchProbe[];
   candidates: CandidateRepo[];
   scoredCandidates: ScoredCandidate[];
   selectedRepos: string[];
+  schemaVersion: 2;
   warnings: string[];
+  observations: SourceObservation[];
+  assessments: ClaimAssessment[];
+  coverage: QuestionCoverage[];
+  outcome: RunOutcome;
+  candidateStates: CandidateState[];
+  explanationResults: RepoExplanationResult[];
+  evidence: EvidenceAnchor[];
+  brief?: ResearchBrief;
+  compiledProbes?: SearchProbeV2[];
+  probeOutcomes?: ProbeOutcome[];
+  budgetLedger?: BudgetLedger;
+  parentRunId?: string;
 };
 ```
+
+The types above are compatibility-oriented projections. A full v2 run also
+includes its `schemaVersion`, `evidencePolicyVersion`, `providerName`,
+`candidateStates`, and `explanationResults`. Supported claims are tied to the
+listed observation IDs and evidence policy; ranking and `selectedRepos` do not
+grant support. Inline artifact input is treated as external evidence and
+cannot be upgraded by the writer.
+
+## Tool: `research.planResearch`
+
+Accepts a `goal` plus optional request hints, or an existing `brief`. A brief
+may be paired with a `submission` to return a new revision. Returns the brief,
+readiness, and question-scoped `needs` containing `questionId`, `need`,
+`suggestedSourceKinds`, and `remainingAllowance`. Planning does not call a
+research provider.
+
+```ts
+type VocabularySubmission = {
+  terms: VocabularyTerm[];
+  lookupOutcomes: Array<{
+    questionId: string;
+    sourceRef: string;
+    status: "succeeded" | "failed";
+    termIdsGained: string[];
+    detail?: string;
+  }>;
+};
+```
+
+Observed terms must cite a source reference from a successful outcome for the
+same question. Other terms remain proposed hypotheses. Failed/denied lookups
+are retained as gaps, and submitted content cannot change original question
+statements, budgets, source allowlists, or egress policy. The resulting brief
+includes incremented revision and parent lineage. `research.planResearch` also
+accepts the `request.localArtifacts` paths or snippets described in the CLI
+workflow; private local fingerprints remain restricted from probes by default.
 
 ## Tool: `research.scoreRepos`
 
@@ -104,6 +167,10 @@ type ExplainRepoPatternOutput = {
 
 Write markdown/JSON artifacts from a research run.
 
+### Trust boundary
+
+Inline `researchRun` records use the same artifact and receipt derivation as cached runs, but all inline observations and assessments are treated as `external`, so they cannot acquire engine-supported status. Pass a cached `runId` to render engine-verified receipts. The cache boundary preserves provenance recorded by the research pipeline; inline input is never promoted by this tool.
+
 ### Input
 
 ```ts
@@ -132,7 +199,9 @@ type WritePlanArtifactOutput = {
 
 ## Error model
 
-Every tool should return structured errors.
+Provider and validation errors are returned with structured codes where the
+tool contract supports them. Do not assume all tools share the sample union
+below; inspect each tool's current Zod input/output schema.
 
 ```ts
 type ResearchError = {

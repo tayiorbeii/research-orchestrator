@@ -13,8 +13,10 @@ import type {
   RepoRef,
 } from "./EvidenceProvider.js";
 import { candidateShell } from "./EvidenceProvider.js";
-import { collectEvidence, lineHasSignal } from "../core/collectEvidence.js";
+import { collectEvidence } from "../core/collectEvidence.js";
+import { downgradeImportedAnchor, EVIDENCE_POLICY_VERSION } from "../core/evidencePolicy.js";
 import { applyFreshnessPolicy } from "./DeepWikiExplainer.js";
+import { selectSourceReads } from "../core/sourceSelection.js";
 
 export interface HybridRepoExplainerConfig {
   /** Evidence provider used for exact verification and the fallback flow. */
@@ -35,10 +37,8 @@ export interface HybridRepoExplainerConfig {
 /**
  * Hybrid repo explainer (docs/05_deepwiki_adapter.md, "Hybrid output model").
  *
- * DeepWiki explains; exact evidence verifies. Every enrichment answer is
- * cross-checked against proved evidence anchors collected through the
- * injected EvidenceProvider — an answer becomes verified:true only when it
- * mentions a proof-requirement signal that a proved anchor backs. When the
+ * DeepWiki explains; its free-form answers remain unverified in Phase 1.
+ * Read excerpts support only narrow source-statement claims. When the
  * enrichment explainer is unavailable or its index is stale, the flow falls
  * back to the Octocode-style exact-evidence explainer (docs/05, "Fallback
  * flow"). DeepWiki is never sole proof.
@@ -69,15 +69,16 @@ export class HybridRepoExplainer implements RepoExplainer {
     const repo = input.repo.repo;
 
     const candidate = await this.buildCandidate(input.repo, input.feature);
-    const { anchors, warnings: evidenceWarnings } = await collectEvidence(
+    const { anchors, observations, warnings: evidenceWarnings } = await collectEvidence(
       this.config.provider,
       input.feature,
       candidate,
+      this.now,
     );
     warnings.push(...evidenceWarnings);
 
     if (!this.config.explainer) {
-      return this.fallback(input, anchors, warnings, undefined);
+      return this.fallback(input, anchors, observations, warnings, undefined);
     }
 
     let capability = await this.config.explainer.canExplain(input.repo);
@@ -96,7 +97,7 @@ export class HybridRepoExplainer implements RepoExplainer {
         `Enrichment ${capability.available ? "index is stale" : "unavailable"} for ${repo}` +
           `${capability.reason ? ` (${capability.reason})` : ""}; using the exact-evidence fallback.`,
       );
-      return this.fallback(input, anchors, warnings, capability);
+      return this.fallback(input, anchors, observations, warnings, capability);
     }
 
     let enriched: ExplainOutput;
@@ -106,7 +107,7 @@ export class HybridRepoExplainer implements RepoExplainer {
       warnings.push(
         `Enrichment explain failed for ${repo} (${(error as Error).message}); using the exact-evidence fallback.`,
       );
-      return this.fallback(input, anchors, warnings, capability);
+      return this.fallback(input, anchors, observations, warnings, capability);
     }
 
     const answers = enriched.answers.map((answer) =>
@@ -116,7 +117,7 @@ export class HybridRepoExplainer implements RepoExplainer {
     warnings.push(...enriched.warnings.filter((w) => !w.includes("unverified enrichment")));
     if (capability.stale) {
       warnings.push(
-        `Enrichment index for ${repo} is stale; only claims verified against exact evidence should be trusted.`,
+        `Enrichment index for ${repo} is stale; its unassessed claims should not be treated as source support.`,
       );
     }
     warnings.push(
@@ -128,35 +129,46 @@ export class HybridRepoExplainer implements RepoExplainer {
       );
     }
 
-    return { provider: "hybrid", repo, answers, freshness: capability, warnings, anchors };
+    return {
+      provider: "hybrid",
+      repo,
+      evidencePolicyVersion: EVIDENCE_POLICY_VERSION,
+      answers,
+      freshness: capability,
+      warnings,
+      anchors,
+      observations,
+    };
   }
 
   /** Exact-evidence explainer (the docs/05 fallback flow). */
   private fallback(
     input: ExplainInput,
     anchors: EvidenceAnchor[],
+    observations: import("../schemas/researchContracts.js").SourceObservation[],
     warnings: string[],
     freshness: CapabilityResult | undefined,
   ): ExplainOutput {
     const repo = input.repo.repo;
-    const proved = anchors.filter((a) => a.proofLevel === "proved");
     const answers: RepoQuestionAnswer[] = input.questions.map((question) => ({
       question,
       answer:
         anchors.length === 0
           ? `No exact evidence available to answer "${question}" — run a proof pass first.`
-          : `Answered from ${anchors.length} exact evidence anchor(s) (${proved.length} proved) in ${repo}; see the evidence entries.`,
+          : `Observed ${anchors.length} source excerpt(s) in ${repo}; they do not answer this question without claim-specific assessment.`,
       evidence: anchors.slice(0, 5),
-      confidence: anchors.length > 0 ? 0.75 : 0.2,
-      verified: proved.length > 0,
+      confidence: 0.2,
+      verified: false,
     }));
     return {
       provider: this.config.provider.name === "mock" ? "mock" : "octocode-fallback",
       repo,
+      evidencePolicyVersion: EVIDENCE_POLICY_VERSION,
       answers,
       ...(freshness ? { freshness } : {}),
       warnings,
       anchors,
+      observations,
     };
   }
 
@@ -196,55 +208,35 @@ export class HybridRepoExplainer implements RepoExplainer {
         // Missing tree becomes missingProof warnings downstream.
       }
     }
-    const likely = new Set(
-      spec.likelyFiles.filter((f) => !f.includes("*")).map((f) => normalizePath(f)),
-    );
-    const priority = (path: string): number => {
-      if (likely.has(normalizePath(path))) return 0;
-      if (/(^|\/)package\.json$/i.test(path)) return 1;
-      return 2;
-    };
-    candidate.matchedPaths = [...new Set(paths)]
-      .sort((a, b) => priority(a) - priority(b) || a.localeCompare(b))
-      .slice(0, this.config.maxFiles ?? 12);
+    const concreteCallerPaths = spec.likelyFiles.filter((path) => !path.includes("*"));
+    const selected = selectSourceReads({
+      question: spec.goal,
+      obligations: spec.proofRequirements.map((requirement) => requirement.description),
+      callerPaths: concreteCallerPaths,
+      treeSample: paths,
+      ecosystem: spec.stack,
+      budget: { total: this.config.maxFiles ?? 12, perRepo: this.config.maxFiles ?? 12 },
+    });
+    candidate.matchedPaths = selected.reads.map((read) => read.path);
     return candidate;
   }
 }
 
 /**
- * Cross-check one enrichment answer against exact evidence anchors: the
- * answer becomes verified:true only when it mentions a proof-requirement
- * signal (identifier-boundary aware) for which a proved anchor exists. The
- * matching proved anchors are attached as the answer's evidence.
+ * Free prose remains unverified in Phase 1. Exact source quotations support
+ * only the narrow "this source states X" statement, not an answer as a whole.
  */
 export function verifyAnswerAgainstAnchors(
   answer: RepoQuestionAnswer,
   spec: FeatureSpec,
   anchors: EvidenceAnchor[],
 ): RepoQuestionAnswer {
-  const text = `${answer.question}\n${answer.answer}`;
-  const matched: EvidenceAnchor[] = [];
-  for (const req of spec.proofRequirements) {
-    const proved = anchors.filter((a) => a.role === req.key && a.proofLevel === "proved");
-    if (proved.length === 0) continue;
-    const mentioned = req.signals.some((signal) =>
-      text.split("\n").some((line) => lineHasSignal(line, signal)),
-    );
-    if (mentioned) matched.push(...proved);
-  }
-  const seen = new Set<string>();
-  const evidence = matched.filter((a) => (seen.has(a.id) ? false : (seen.add(a.id), true)));
-  if (evidence.length === 0) {
-    return { ...answer, verified: false };
-  }
+  void spec;
+  void anchors;
   return {
     ...answer,
-    verified: true,
-    evidence: evidence.slice(0, 5),
-    confidence: Math.max(answer.confidence, 0.85),
+    evidence: answer.evidence.map(downgradeImportedAnchor),
+    verified: false,
+    confidence: Math.min(answer.confidence, 0.5),
   };
-}
-
-function normalizePath(path: string): string {
-  return path.replace(/^\.\//, "").toLowerCase();
 }

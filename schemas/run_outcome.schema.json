@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/run_outcome.schema.json",
+  "title": "RunOutcome",
+  "type": "object",
+  "required": ["status", "reasons"],
+  "properties": { "status": { "enum": ["complete", "partial", "inconclusive", "needs_input", "failed"] }, "reasons": { "type": "array", "items": { "type": "string" } } }
+}

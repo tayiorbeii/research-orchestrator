@@ -13,11 +13,42 @@ import { setDeepWikiAskQuestion } from "../src/adapters/bridge.js";
 import { collectEvidence } from "../src/core/collectEvidence.js";
 import { normalizeFeatureSpec } from "../src/core/normalizeFeatureSpec.js";
 import { explainRepoPattern } from "../src/mcp/tools/explainRepoPattern.js";
+import { syntheticCases } from "./fixtures/research-integrity/synthetic-cases.js";
 
 const GOAL = "Build a Next.js + Convex app with email magic links via Resend.";
 const REPO = "headcodecms/headcodecms";
 const NOW = () => new Date("2026-07-06T00:00:00.000Z");
 const spec = normalizeFeatureSpec(GOAL);
+
+function syntheticSpec(signal: string) {
+  return normalizeFeatureSpec(`Research whether ${signal} is configured.`, {
+    goalKind: "research",
+    requiredConcepts: [signal],
+    proofRequirements: [
+      {
+        key: "behavior_proof",
+        description: `Configuration of ${signal}`,
+        required: true,
+        signals: [signal],
+      },
+    ],
+  });
+}
+
+function syntheticAnchor(signal: string, proofLevel: "proved" | "partial" = "proved") {
+  return {
+    id: "synthetic_anchor",
+    provider: "mock",
+    repo: "synthetic/example",
+    path: "src/coverage.ts",
+    role: "behavior_proof",
+    proofLevel,
+    matchedSignal: signal,
+    matchText: `${signal} is configured`,
+    startLine: 1,
+    endLine: 1,
+  } as const;
+}
 
 /** Fake fetch for the DeepWiki HEAD probe. */
 function fakeFetch(status: number, lastModified?: string): typeof fetch {
@@ -113,8 +144,129 @@ describe("DeepWiki freshness metadata (docs/05)", () => {
   });
 });
 
+describe("hybrid source selection", () => {
+  it("reads Python workflow and ecosystem configuration before dotfile/tree order under a tight cap", async () => {
+    const reads: string[] = [];
+    const provider = {
+      name: "mock",
+      getRepoMetadata: async () => ({ repo: REPO, owner: "headcodecms", name: "headcodecms", defaultBranch: "main" }),
+      getRepoTree: async () => ({
+        repo: REPO,
+        paths: [".gitignore", "src/lint.py", "ruff.toml", ".github/workflows/lint.yml", "pyproject.toml"],
+      }),
+      getFile: async ({ repo, path }: { repo: string; path: string }) => {
+        reads.push(path);
+        return { provider: "mock", repo, path, content: "ruff = true" };
+      },
+    } as unknown as EvidenceProvider;
+    const hybrid = new HybridRepoExplainer({ provider, maxFiles: 3 });
+    await hybrid.explain({
+      repo: { repo: REPO },
+      feature: normalizeFeatureSpec("Research Python Ruff CI configuration", { stack: ["Python"] }),
+      questions: ["How is Ruff configured?"],
+    });
+
+    expect(reads).toEqual(["ruff.toml", ".github/workflows/lint.yml", "pyproject.toml"]);
+  });
+});
+
 describe("HybridRepoExplainer (DeepWiki explains, exact evidence verifies)", () => {
-  it("verifies enrichment answers against proved anchors (hybrid output model)", async () => {
+  // flips in Phase 1: Keywords only in the question cannot verify an answer.
+  it("does not verify unrelated prose from a keyword that appears only in the question", () => {
+    const fixture = syntheticCases.questionOnlyKeyword;
+    const signal = fixture.anchorSignal;
+    const answer = verifyAnswerAgainstAnchors(
+      {
+        question: fixture.question,
+        answer: fixture.answer,
+        evidence: [],
+        confidence: 0.2,
+        verified: false,
+      },
+      syntheticSpec(signal),
+      [syntheticAnchor(signal)],
+    );
+
+    expect(answer.verified).toBe(false);
+    expect(answer.confidence).toBeLessThan(0.85);
+  });
+
+  // flips in Phase 1: Fallback explanations identify unanswered questions even when observations exist.
+  it("does not mark every fallback answer verified because one unrelated anchor is proved", async () => {
+    const fixture = syntheticCases.fallbackAnswers;
+    const provider = {
+      name: "mock",
+      getFile: async ({ repo, path }: { repo: string; path: string }) => ({
+        provider: "mock" as const,
+        repo,
+        path,
+        content: fixture.anchorText,
+      }),
+    } as unknown as EvidenceProvider;
+    const hybrid = new HybridRepoExplainer({
+      provider,
+      resolveCandidate: async () => ({
+        repo: REPO,
+        owner: "headcodecms",
+        name: "headcodecms",
+        defaultBranch: "main",
+        discoveredBy: [],
+        matchedPaths: ["src/coverage.ts"],
+        candidateSignals: [],
+      }),
+    });
+
+    const output = await hybrid.explain({
+      repo: { repo: REPO },
+      feature: syntheticSpec(fixture.anchorSignal),
+      questions: [...fixture.questions],
+    });
+
+    expect(output.anchors.some((anchor) => anchor.supportMethod === "exact_source_quotation")).toBe(true);
+    expect(output.answers.every((answer) => answer.verified === false)).toBe(true);
+  });
+
+  // flips in Phase 1: A supported sentence plus an unsupported sentence does not yield a verified answer.
+  it("does not blanket verify an answer containing a supported and an invented sentence", () => {
+    const fixture = syntheticCases.supportedAndInvented;
+    const answer = verifyAnswerAgainstAnchors(
+      {
+        question: fixture.question,
+        answer: fixture.answer,
+        evidence: [],
+        confidence: 0.4,
+        verified: false,
+      },
+      syntheticSpec(fixture.anchorSignal),
+      [syntheticAnchor(fixture.anchorSignal)],
+    );
+
+    expect(answer.verified).toBe(false);
+  });
+
+  // flips in Phase 1: Caller-provided proof/confidence flags cannot restore verification.
+  it("does not trust caller-supplied proof and verified flags on imported anchors", () => {
+    const fixture = syntheticCases.importedProofFlags;
+    const anchor = fixture.importedAnchor as unknown as Parameters<
+      typeof verifyAnswerAgainstAnchors
+    >[2][number];
+    const answer = verifyAnswerAgainstAnchors(
+      {
+        question: fixture.question,
+        answer: fixture.answer,
+        evidence: [anchor],
+        confidence: 0.2,
+        verified: true,
+      },
+      syntheticSpec(fixture.anchorSignal),
+      [anchor],
+    );
+
+    expect(answer.verified).toBe(false);
+    expect(answer.confidence).toBeLessThan(0.85);
+  });
+
+  it("keeps enrichment answers unverified even when exact quotations are available", async () => {
     const provider = new MockEvidenceProvider();
     const deepwiki = new DeepWikiExplainer({
       askQuestion: async (_repo, question) =>
@@ -136,14 +288,15 @@ describe("HybridRepoExplainer (DeepWiki explains, exact evidence verifies)", () 
     expect(out.freshness?.stale).toBe(false);
 
     const [verified, unverified] = out.answers;
-    expect(verified!.verified).toBe(true);
-    expect(verified!.evidence.length).toBeGreaterThan(0);
-    expect(verified!.evidence.every((a) => a.proofLevel === "proved")).toBe(true);
-    expect(verified!.confidence).toBeGreaterThanOrEqual(0.85);
+    // Source quotations support only "this source states X" in Phase 1, not free prose.
+    expect(verified!.verified).toBe(false);
+    expect(verified!.evidence).toEqual([]);
+    expect(out.anchors?.some((a) => a.supportMethod === "exact_source_quotation")).toBe(true);
+    expect(verified!.confidence).toBeLessThanOrEqual(0.5);
 
     // Claims that no proved anchor backs stay unverified — never guessed.
     expect(unverified!.verified).toBe(false);
-    expect(out.warnings.some((w) => w.includes("Hybrid verification: 1/2"))).toBe(true);
+    expect(out.warnings.some((w) => w.includes("Hybrid verification: 0/2"))).toBe(true);
   });
 
   it("falls back to the exact-evidence explainer when DeepWiki is stale", async () => {
@@ -176,8 +329,8 @@ describe("HybridRepoExplainer (DeepWiki explains, exact evidence verifies)", () 
     expect(out.provider).toBe("octocode-fallback");
     expect(out.freshness?.stale).toBe(true);
     expect(out.warnings.some((w) => w.includes("exact-evidence fallback"))).toBe(true);
-    // Fallback answers are grounded in exact anchors, so they can be verified.
-    expect(out.answers[0]!.verified).toBe(true);
+    // A source excerpt alone does not establish the free-form fallback answer.
+    expect(out.answers[0]!.verified).toBe(false);
     expect(out.answers[0]!.evidence.length).toBeGreaterThan(0);
   });
 
@@ -196,7 +349,7 @@ describe("HybridRepoExplainer (DeepWiki explains, exact evidence verifies)", () 
     });
     expect(out.provider).toBe("mock"); // fallback labeled by the evidence provider
     expect(out.warnings.some((w) => w.includes("unavailable"))).toBe(true);
-    expect(out.answers[0]!.verified).toBe(true);
+    expect(out.answers[0]!.verified).toBe(false);
   });
 
   it("verifyAnswerAgainstAnchors never verifies from docs-only (partial) anchors", async () => {
@@ -233,8 +386,9 @@ describe("research.explainRepoPattern (hybrid MCP tool)", () => {
     expect(output.explanations).toHaveLength(1);
     const explanation = output.explanations[0]!;
     expect(explanation.source).toBe("mock");
-    expect(explanation.answers.every((a) => a.verified)).toBe(true);
-    expect(explanation.implementationMap.files.length).toBeGreaterThan(0);
+    expect(explanation.answers.every((a) => !a.verified)).toBe(true);
+    expect(explanation.evidencePolicyVersion).toBe("phase1_exact_quotation_v1");
+    expect(explanation.implementationMap.files).toEqual([]);
     expect(output.warnings.some((w) => w.includes("DeepWiki bridge not configured"))).toBe(true);
   });
 

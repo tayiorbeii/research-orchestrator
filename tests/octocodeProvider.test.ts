@@ -106,6 +106,10 @@ afterEach(() => {
 });
 
 describe("Octocode normalization", () => {
+  it("does not claim revision pinning because file reads do not return commit SHAs", () => {
+    expect(new OctocodeEvidenceProvider({ callTool: fakeOctocodeCaller() }).searchCapabilities().revisionPinning).toBe(false);
+  });
+
   it("splitQueryTerms turns quoted probe queries into AND terms", () => {
     expect(splitQueryTerms('"convexAuth" "Resend("')).toEqual(["convexAuth", "Resend("]);
     expect(splitQueryTerms('"signIn(\'resend\'" "@convex-dev/auth/react"')).toEqual([
@@ -195,6 +199,14 @@ describe("Octocode normalization", () => {
       concise: false,
     });
   });
+
+  it("preserves a provider-reported file path from ghGetFileContent", async () => {
+    const provider = new OctocodeEvidenceProvider({
+      callTool: async () => ({ files: [{ path: "actual/readme.md", content: "quoted source" }] }),
+    });
+    const file = await provider.getFile({ repo: REPO, path: "README.md" });
+    expect(file.path).toBe("actual/readme.md");
+  });
 });
 
 describe("full pipeline against a fake Octocode caller", () => {
@@ -210,12 +222,13 @@ describe("full pipeline against a fake Octocode caller", () => {
     expect(run.candidates[0]!.matchedPaths.length).toBe(4);
 
     const scored = run.scoredCandidates[0]!;
-    expect(scored.class).toBe("production");
-    expect(scored.nextAction).toBe("extract");
+    // Source excerpts are observations, not implementation verification.
+    expect(scored.class).toBe("reference");
+    expect(scored.nextAction).not.toBe("extract");
     expect(run.selectedRepos).toContain(REPO);
 
-    const proved = evidence.filter((a) => a.proofLevel === "proved");
-    expect(proved.length).toBeGreaterThanOrEqual(3);
+    const supported = evidence.filter((a) => a.supportMethod === "exact_source_quotation");
+    expect(supported.length).toBeGreaterThanOrEqual(3);
     for (const anchor of evidence) expect(anchor.provider).toBe("octocode");
 
     // Exact reads happened through the bridge (search + one read per path).
@@ -308,7 +321,7 @@ describe("Octocode bridge wiring (end-to-end configuration)", () => {
     setOctocodeToolCaller(fakeOctocodeCaller());
     const output = await findImplementations({ goal: GOAL, mode: "octocode" });
     expect(output.selectedRepos).toContain(REPO);
-    expect(output.evidence.filter((a) => a.proofLevel === "proved").length).toBeGreaterThanOrEqual(3);
-    expect(output.runId.startsWith("run_next_convex_magic_link_auth")).toBe(true);
+    expect(output.evidence.filter((a) => a.supportMethod === "exact_source_quotation").length).toBeGreaterThanOrEqual(3);
+    expect(output.runId.startsWith("run_next_convex_magic_link_auth_")).toBe(true);
   });
 });

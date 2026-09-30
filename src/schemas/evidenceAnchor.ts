@@ -12,6 +12,13 @@ export type EvidenceProviderName = z.infer<typeof EvidenceProviderNameSchema>;
 export const ProofLevelSchema = z.enum(["candidate", "partial", "proved"]);
 export type ProofLevel = z.infer<typeof ProofLevelSchema>;
 
+export const EvidencePolicyVersionSchema = z.enum([
+  "phase1_exact_quotation_v1",
+  "phase2_claim_evidence_v2",
+  "legacy_unvalidated",
+]);
+export const EvidenceSupportMethodSchema = z.enum(["exact_source_quotation"]);
+
 /** Mirrors schemas/evidence_anchor.schema.json. */
 export const EvidenceAnchorSchema = z.object({
   id: z.string().min(1),
@@ -26,5 +33,7 @@ export const EvidenceAnchorSchema = z.object({
   url: z.string().optional(),
   role: z.string().min(1),
   proofLevel: ProofLevelSchema,
+  evidencePolicyVersion: EvidencePolicyVersionSchema.optional(),
+  supportMethod: EvidenceSupportMethodSchema.optional(),
 });
 export type EvidenceAnchor = z.infer<typeof EvidenceAnchorSchema>;

@@ -1,87 +1,45 @@
-# Plan: email magic-link authentication
+> **Synthetic/mock evidence:** fixture observations are not live repository findings.
+
+# Plan: email magic-link authentication — PARTIAL (no evidence-backed plan)
+
+> ⚠ No implementation plan is safe until the proof contract is complete. This
+> file lists recovery actions, not steps to implement. Do not build from it.
 
 ## Objective
 
 Next.js + Convex app with email magic links via Resend
 
-## Recommended approach
+## Status: inconclusive
 
-Follow the pattern proved by 1 selected repo(s). Dependencies: `next`, `convex`, `@convex-dev/auth`, `@auth/core`, `resend`.
+Reasons: 1 required question(s) remain unsatisfied., synthetic_evidence
 
-## Files to create or modify
+## Why there is no plan
 
-| Path | Role | Action |
-|---|---|---|
-| `package.json` | dependency manifest | create/modify (proved pattern) |
-| `convex/auth.ts` | server auth configuration | create/modify (proved pattern) |
-| `convex/http.ts` | http route wiring | create |
-| `convex/auth.config.ts` | auth provider config | create |
-| `middleware.ts` | route protection | create |
-| `proxy.ts` | route protection | create/modify (proved pattern) |
-| `src/middleware.ts` | route protection | create |
-| `app/(admin)/admin/login/page.tsx` | server_auth_proof | create/modify (proved pattern) |
+The run selected 1 repository/repositories and captured
+17 evidence anchor(s) (17 exact-quotation supports), but the proof contract
+is still incomplete. Source quotations establish only what a source states; they do not establish runtime behavior.
+No implementation steps are established. Resolve the reasons above and re-run before implementing.
 
-## Step-by-step implementation
+## Recovery actions
 
-1. Install dependencies: next, convex, @convex-dev/auth, @auth/core, resend.
-2. Configure environment variables (names only, values stay in your secret store): AUTH_RESEND_KEY, CONVEX_DEPLOYMENT, NEXT_PUBLIC_CONVEX_URL, CONVEX_SITE_URL, SITE_URL, JWT_PRIVATE_KEY, JWKS.
-3. Server: convex/auth.ts exports convexAuth({ providers: [Resend({ ... })] }).
-4. Server: convex/http.ts wires auth routes via auth.addHttpRoutes(http).
-5. Server: convex/auth.config.ts declares the auth provider domain/application ID.
-6. Server: Magic-link email is sent by the Resend provider with a callback URL back to the Convex site.
-7. Client: App is wrapped in ConvexAuthNextjsServerProvider (server) and ConvexAuthNextjsProvider (client).
-8. Client: Login page calls useAuthActions().signIn("resend", formData) with the user email.
-9. Client: UI shows a 'check your email' state after sending the link.
-10. Client: Clicking the emailed link completes sign-in and redirects to the app.
-11. Routing: middleware.ts / src/middleware.ts / proxy.ts uses convexAuthNextjsMiddleware.
-12. Routing: createRouteMatcher defines which routes require authentication.
-13. Routing: Unauthenticated users are redirected to the login page.
-14. Test: Unit test the login form submit path (email captured, signIn called with 'resend').
-15. Test: Integration test that protected routes redirect unauthenticated users.
-16. Test: Manual smoke test of the full email round trip.
+1. Inspect research.md "What was searched" to confirm probes targeted the right entities.
+2. If discovery missed the project, add the official repo/docs URL as an explicit hint or candidate.
+3. Provide structured hints (requiredConcepts, likelyFiles, proofRequirements) for novel domains.
+4. Re-run into a new output directory and compare; do not overwrite inconclusive artifacts.
 
-## Environment variables
+## Probes attempted
 
-- `AUTH_RESEND_KEY` (name only — set the value in your secret store)
-- `CONVEX_DEPLOYMENT` (name only — set the value in your secret store)
-- `NEXT_PUBLIC_CONVEX_URL` (name only — set the value in your secret store)
-- `CONVEX_SITE_URL` (name only — set the value in your secret store)
-- `SITE_URL` (name only — set the value in your secret store)
-- `JWT_PRIVATE_KEY` (name only — set the value in your secret store)
-- `JWKS` (name only — set the value in your secret store)
-
-## Testing plan
-
-- Unit test the login form submit path (email captured, signIn called with 'resend')
-- Integration test that protected routes redirect unauthenticated users
-- Manual smoke test of the full email round trip
-
-## Rollback plan
-
-- Land the change behind a small, isolated commit series so a single revert removes the feature.
-- Keep the previous auth/feature path working until the new flow passes smoke tests.
-- Document the env vars added so they can be removed cleanly on rollback.
-
-## Dependencies
-
-- `next`
-- `convex`
-- `@convex-dev/auth`
-- `@auth/core`
-- `resend`
+- [high_precision] "convexAuth" "Resend"
+- [high_precision] "useAuthActions" "signIn('resend'"
+- [high_precision] "convexAuthNextjsMiddleware" "createRouteMatcher"
+- [recall] "@convex-dev/auth" "Resend"
+- [recall] "@auth/core" "Resend"
+- [path_targeted] "Resend(" path:convex/auth.ts
+- [path_targeted] "convexAuth" path:convex/http.ts
+- [path_targeted] "Resend(" path:convex/auth.config.ts
+- [path_targeted] "convexAuthNextjsMiddleware" path:middleware.ts
+- [repo_search] Next.js Convex email magic-link authentication
 
 ## References
 
-- [headcodecms/headcodecms](https://github.com/headcodecms/headcodecms) (production, score 0.85)
-  - `app/(admin)/admin/login/page.tsx:14` [server_auth_proof, proved] — `void signIn('resend', formData).then(() => setSent(true));` ([link](https://github.com/headcodecms/headcodecms/blob/main/app/(admin)/admin/login/page.tsx#L14))
-  - `app/(admin)/admin/login/page.tsx:2` [client_flow_proof, proved] — `import { useAuthActions } from "@convex-dev/auth/react";` ([link](https://github.com/headcodecms/headcodecms/blob/main/app/(admin)/admin/login/page.tsx#L2))
-  - `convex/auth.ts:1` [server_auth_proof, proved] — `import { convexAuth } from "@convex-dev/auth/server";` ([link](https://github.com/headcodecms/headcodecms/blob/main/convex/auth.ts#L1))
-  - `package.json:5` [dependency_proof, proved] — `"next": "^15.0.0",` ([link](https://github.com/headcodecms/headcodecms/blob/main/package.json#L5))
-  - `proxy.ts:9` [server_auth_proof, proved] — `export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {` ([link](https://github.com/headcodecms/headcodecms/blob/main/proxy.ts#L9))
-  - `proxy.ts:2` [route_protection_proof, proved] — `convexAuthNextjsMiddleware,` ([link](https://github.com/headcodecms/headcodecms/blob/main/proxy.ts#L2))
-
-## Risks
-
-- Missing auth.addHttpRoutes(http) in convex/http.ts silently breaks the callback flow
-- AUTH_RESEND_KEY must be set on the Convex deployment, not just the Next.js app
-- middleware matcher must exclude static assets and the auth callback routes
+- [headcodecms/headcodecms](https://github.com/headcodecms/headcodecms) (partially supported; do not implement yet)

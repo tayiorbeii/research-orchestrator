@@ -5,6 +5,7 @@ import type {
   FeatureSpec,
   RepoQuestionAnswer,
   SearchProbe,
+  SourceObservation,
 } from "../schemas/index.js";
 
 export interface RepoRef {
@@ -20,6 +21,7 @@ export interface NormalizedSearchResult {
   line?: number;
   probeId: string;
   snippet?: string;
+  truncated?: boolean;
   raw?: unknown;
 }
 
@@ -49,6 +51,10 @@ export interface RepoMetadata {
   pushedAt?: string;
 }
 
+export type RevisionResolution =
+  | { sha: string; ref: string; source: "provider" }
+  | { unavailableReason: string };
+
 export interface FileReadRequest {
   repo: string;
   path: string;
@@ -62,6 +68,14 @@ export interface FileEvidence {
   repo: string;
   path: string;
   ref?: string;
+  /** Provider-returned immutable commit/revision, when available. */
+  resolvedRevision?: string;
+  readStatus?: "complete" | "partial" | "unavailable";
+  startLine?: number;
+  endLine?: number;
+  offsetStart?: number;
+  offsetSemantics?: string;
+  truncationNotice?: string;
   content?: string;
   url?: string;
   /** Set when the file could not be read; the reason becomes a missingProof entry. */
@@ -71,6 +85,41 @@ export interface FileEvidence {
 export interface RepoTree {
   repo: string;
   paths: string[];
+}
+
+export interface IssueProposal {
+  repo: string;
+  number: number;
+  title: string;
+  body: string;
+  state: "open" | "closed";
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IssueSearchQuery {
+  query: string;
+  repo?: string;
+  maxResults: number;
+}
+
+export interface IssueReadRequest {
+  repo: string;
+  number: number;
+}
+
+export type SearchQualifier = "language" | "path" | "filename" | "extension" | "repo" | "org";
+
+/** Search behavior the adapter currently passes through to its provider. */
+export interface ProviderSearchCapabilities {
+  capabilityVersion: string;
+  revisionPinning: boolean;
+  supportedQualifiers: { codeSearch: SearchQualifier[]; repoSearch: SearchQualifier[] };
+  codeSearch: boolean;
+  repoSearch: boolean;
+  issues: boolean;
+  batch: { codeSearch: boolean; repoSearch: boolean; maxCodeQueriesPerCall?: number };
 }
 
 export interface LocalRepoRef {
@@ -84,10 +133,14 @@ export interface LocalRepoRef {
  */
 export interface EvidenceProvider {
   readonly name: EvidenceProviderName;
+  searchCapabilities(): ProviderSearchCapabilities;
   searchCode(probes: SearchProbe[]): Promise<NormalizedSearchResult[]>;
   searchRepos(query: RepoSearchQuery): Promise<RepoSearchResult[]>;
   getRepoMetadata(repo: RepoRef): Promise<RepoMetadata>;
+  resolveRevision?(input: RepoRef): Promise<RevisionResolution>;
   getFile(input: FileReadRequest): Promise<FileEvidence>;
+  searchIssues?(input: IssueSearchQuery): Promise<IssueProposal[]>;
+  getIssue?(input: IssueReadRequest): Promise<IssueProposal>;
   getRepoTree?(repo: RepoRef): Promise<RepoTree>;
   cloneRepo?(repo: RepoRef): Promise<LocalRepoRef>;
 }
@@ -119,11 +172,13 @@ export interface ExplainInput {
 export interface ExplainOutput {
   provider: "deepwiki" | "octocode-fallback" | "hybrid" | "mock";
   repo: string;
+  evidencePolicyVersion?: "phase1_exact_quotation_v1" | "phase2_claim_evidence_v2" | "legacy_unvalidated";
   answers: RepoQuestionAnswer[];
   freshness?: CapabilityResult;
   warnings: string[];
   /** Exact evidence anchors collected while verifying (hybrid/fallback flows). */
   anchors?: EvidenceAnchor[];
+  observations?: SourceObservation[];
 }
 
 export interface RepoExplainer {

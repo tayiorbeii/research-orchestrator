@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/budget_ledger.schema.json",
+  "title": "BudgetLedger",
+  "type": "object",
+  "required": ["limits", "consumed", "cancelled"],
+  "properties": {
+    "limits": {
+      "type": "object",
+      "required": ["maxQuestions", "queryUnits", "reconnaissanceReads", "fileReads", "fileReadsPerRepo", "refinementRounds", "refinementProbes", "deadlineMs"],
+      "properties": {
+        "maxQuestions": { "type": "integer", "minimum": 0 },
+        "queryUnits": { "type": "integer", "minimum": 0 }, "reconnaissanceReads": { "type": "integer", "minimum": 0 },
+        "fileReads": { "type": "integer", "minimum": 0 }, "fileReadsPerRepo": { "type": "integer", "minimum": 0 },
+        "refinementRounds": { "type": "integer", "minimum": 0 }, "refinementProbes": { "type": "integer", "minimum": 0 },
+        "deadlineMs": { "type": "integer", "minimum": 1 }
+      }, "additionalProperties": false
+    },
+    "consumed": {
+      "type": "object",
+      "required": ["queryUnits", "rpcCount", "reconnaissanceReads", "fileReads", "fileReadsByRepo", "refinementRounds", "refinementProbes"],
+      "properties": {
+        "queryUnits": { "type": "integer", "minimum": 0 }, "rpcCount": { "type": "integer", "minimum": 0 },
+        "unbudgetedMetadataCalls": { "type": "integer", "minimum": 0 },
+        "reconnaissanceReads": { "type": "integer", "minimum": 0 }, "fileReads": { "type": "integer", "minimum": 0 },
+        "fileReadsByRepo": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "refinementRounds": { "type": "integer", "minimum": 0 }, "refinementProbes": { "type": "integer", "minimum": 0 }
+      }, "additionalProperties": false
+    },
+    "reserved": { "type": "object", "required": ["queryUnits"], "properties": { "queryUnits": { "type": "integer", "minimum": 0 } }, "additionalProperties": false },
+    "startedAt": { "type": "string" }, "deadlineAt": { "type": "string" }, "elapsedMs": { "type": "number", "minimum": 0 }, "cancelled": { "type": "boolean" },
+    "exhaustion": {
+      "type": "object",
+      "required": ["questions", "repositories", "referencedFiles"],
+      "properties": {
+        "questions": { "type": "array", "items": { "type": "object", "required": ["questionId", "reason"], "properties": { "questionId": { "type": "string" }, "reason": { "type": "string" } }, "additionalProperties": false } },
+        "repositories": { "type": "array", "items": { "type": "object", "required": ["repo", "reason"], "properties": { "repo": { "type": "string" }, "reason": { "type": "string" } }, "additionalProperties": false } },
+        "referencedFiles": { "type": "array", "items": { "type": "object", "required": ["repo", "path", "reason"], "properties": { "repo": { "type": "string" }, "path": { "type": "string" }, "reason": { "type": "string" } }, "additionalProperties": false } }
+      }, "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

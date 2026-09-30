@@ -1,0 +1,104 @@
+{
+  "synthetic": true,
+  "banner": "SYNTHETIC MOCK RECEIPT — NOT LIVE PROVIDER EVIDENCE",
+  "provenance": "Authored for Phase 6 from synthetic source text; no provider output or external repository was copied.",
+  "fixtureId": "underspecified-improvement",
+  "title": "Under-specified request",
+  "surface": "goal",
+  "split": "held_out",
+  "prompt": "Find a way to improve project productivity",
+  "frozenCorpus": [
+    {
+      "sourceId": "vague-negative",
+      "repo": "synthetic/productivity-decoy",
+      "path": "README.md",
+      "excerpt": "No product or behavior is specified.",
+      "label": "negative"
+    },
+    {
+      "sourceId": "vague-noise",
+      "repo": "synthetic/productivity-noise",
+      "path": "docs/notes.md",
+      "excerpt": "Productivity improvements are an open research area.",
+      "label": "noisy"
+    }
+  ],
+  "independentLabels": {
+    "relevantSourceIds": [],
+    "supportedFacts": [],
+    "expectedQuestionCoverage": {
+      "q1": "not_attempted"
+    },
+    "expectedUntouchedQuestions": [
+      "q1"
+    ]
+  },
+  "result": {
+    "taskId": "underspecified-improvement",
+    "split": "held_out",
+    "surface": "goal",
+    "intentGroups": [
+      {
+        "questionId": "q1",
+        "intent": "implementation_behavior",
+        "usefulSourcesFound": 0,
+        "relevantSourcesLabeled": 0
+      }
+    ],
+    "supportedClaimPrecision": {
+      "trueSupported": 0,
+      "falseSupported": 0,
+      "labeledSupported": 0,
+      "precision": null
+    },
+    "unsupportedVerificationCount": {
+      "claimOverclaims": 0,
+      "answerLevelOverclaims": 0,
+      "total": 0
+    },
+    "questionCoverage": {
+      "expected": 1,
+      "satisfied": 0,
+      "byQuestion": [
+        {
+          "questionId": "q1",
+          "expected": "not_attempted",
+          "actual": "not_attempted"
+        }
+      ],
+      "coverageMatch": true,
+      "coverageMismatchQuestionIds": [],
+      "untouchedRequired": [
+        "q1"
+      ],
+      "expectedUntouched": [
+        "q1"
+      ],
+      "untouchedMatch": true
+    },
+    "cost": {
+      "queryCount": 0,
+      "fileReadCount": 0,
+      "msToFirstUsefulObservation": null,
+      "msToOutcome": 1
+    },
+    "events": {
+      "providerFailures": 0,
+      "partialReads": 0,
+      "budgetStops": 0,
+      "clarificationOrAbstention": 1
+    },
+    "legacyRoundTripLosses": {
+      "count": 6,
+      "fields": [
+        "evidencePolicyVersion",
+        "evidenceOrigin",
+        "coverage",
+        "outcome",
+        "brief",
+        "budgetLedger"
+      ]
+    }
+  },
+  "evaluationLane": "mock_replay"
+}

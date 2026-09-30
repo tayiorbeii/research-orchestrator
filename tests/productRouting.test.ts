@@ -161,15 +161,15 @@ describe("searchRepos fallback discovery (code search misses)", () => {
     // Diagnostics distinguish an empty code-search result from a failure.
     expect(run.warnings.some((w) => /Code search returned no results/.test(w))).toBe(true);
     expect(run.warnings.some((w) => /Repo discovery returned 1 repo\(s\)/.test(w))).toBe(true);
-    // Research proofs are satisfied by documentation -> proved evidence.
+    // Read excerpts support only the exact quoted source statement in Phase 1.
     expect(evidence.length).toBeGreaterThan(0);
-    expect(evidence.every((a) => a.proofLevel === "proved")).toBe(true);
+    expect(evidence.every((a) => a.supportMethod === "exact_source_quotation")).toBe(true);
     expect(run.selectedRepos).toContain("ogulcancelik/flowdeck");
     // Flowdeck's README proves Flowdeck behavior, but it does not prove every named
     // migration endpoint (WezTerm/iTerm2), so the overall run stays honest.
     expect(deriveRunStatus(run, evidence)).toMatchObject({
       status: "inconclusive",
-      reasons: expect.arrayContaining(["missing_required_proof"]),
+      reasons: expect.arrayContaining(["Required questions remain unassessed."]),
     });
   });
 });

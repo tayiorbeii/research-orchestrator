@@ -10,16 +10,27 @@ DeepWiki enrichment.
 > "Find examples of a Next.js + Convex app using email magic links, extract
 > the implementation pattern, and produce a grounded plan."
 
-becomes a repeatable workflow that:
+> "Find examples of a Next.js + Convex app using email magic links, extract the implementation pattern, and produce a grounded plan."
 
-1. Normalizes the user's goal into a structured feature spec.
-2. Generates high-precision and high-recall GitHub/Octocode probes.
-3. Collects candidate repositories.
-4. Scores candidates based on implementation evidence.
-5. Reads exact source evidence.
-6. Optionally enriches with DeepWiki when available and fresh.
-7. Falls back to Octocode/local repo understanding when DeepWiki is unavailable or stale.
-8. Produces reusable planning artifacts with evidence anchors.
+into a repeatable workflow. New work uses a validated v2 research brief and
+question-scoped evidence ledger. Candidate scores and selected-repository lists
+help discovery but do not verify claims.
+
+The original candidate-oriented pipeline remains available as a compatibility
+projection. Its stages describe discovery and artifact production, not the
+current evidence authority.
+
+The compatibility workflow can:
+
+1. Normalize the user's goal into a structured feature spec.
+2. Generate high-precision and high-recall GitHub/Octocode probes.
+3. Collect candidate repositories.
+4. Rank candidates for further inspection.
+5. Read exact source evidence.
+6. Optionally enrich with DeepWiki when available and fresh.
+7. Fall back to Octocode/local repo understanding when DeepWiki is unavailable or stale.
+8. Produce reusable planning artifacts with evidence anchors.
+9. Expose the workflow as an MCP server and/or CLI.
 
 ## Install
 
@@ -94,6 +105,30 @@ Octocode bridge; explicit environment variables always win. Exit codes:
 > **Full details** — [`docs/RUNBOOK.md`](docs/RUNBOOK.md) covers the verified
 > mock-mode quickstart, live Octocode setup, MCP server registration, tests,
 > output artifacts, and troubleshooting.
+
+## Brief-based research
+
+Use `plan` to validate a structured request before provider calls, then execute
+the resulting brief. A `needs_input` result includes vocabulary work for a host
+to perform and cite; planning itself does not claim that a lookup occurred.
+
+```sh
+npm run cli -- plan --request request.json --out brief.json
+npm run cli -- find --brief brief.json --out .research/run --mode mock
+npm run cli -- find --resume RUN_ID --brief revised-brief.json --out .research/resume --mode mock
+```
+
+`find --goal` remains available as a compatibility adapter, with intentionally
+stricter handling of vague goals. Mock is synthetic fixture data, not live
+repository research; its mode and synthetic origin are shown in receipts.
+
+## Offline evaluation
+
+`npm run eval` replays six frozen synthetic corpora, reports separate discovery,
+support precision, unsupported verification, coverage, costs, provider events,
+and compatibility-loss metrics, and labels tuning versus held-out fixtures.
+It makes no live provider calls. See [`docs/10_eval_benchmarks.md`](docs/10_eval_benchmarks.md)
+and committed demo receipts under `examples/receipts/`.
 
 ## Suggested reading order
 

@@ -10,8 +10,9 @@ import { MockEvidenceProvider } from "../src/adapters/MockEvidenceProvider.js";
 /**
  * Golden-snapshot regression fixtures (docs/10_eval_benchmarks.md,
  * "Regression tests"): the deterministic mock run must regenerate artifacts
- * byte-identical to tests/fixtures/next-convex-magic-link/. Any scoring or
- * rendering change shows up as a diff here.
+ * byte-identical to tests/fixtures/next-convex-magic-link/. Phase 2 records
+ * observations, scoped claim assessments, coverage, and run outcome alongside
+ * the compatibility anchor projection.
  *
  * To intentionally update the snapshots after reviewing the diff:
  *   npx tsx scripts/generate-golden-fixtures.ts
@@ -48,13 +49,29 @@ describe("golden mock artifacts (docs/10 regression tests)", () => {
       runId: string;
       createdAt: string;
       selectedRepos: string[];
-      evidence: Array<{ proofLevel: string }>;
+      evidencePolicyVersion: string;
+      evidenceOrigin: string;
+      schemaVersion: number;
+      observations: Array<{ readStatus: string; revisionStatus: string }>;
+      assessments: Array<{ status: string; assessorOrigin: string; evidenceOrigin?: string; subject: { repo: string }; assertion: string }>;
+      coverage: unknown[];
+      outcome: { status: string; reasons: string[] };
+      evidence: Array<{ proofLevel: string; supportMethod?: string }>;
     };
     expect(parsed.runId).toBe("run_mock_next_convex_magic_link_auth");
     expect(parsed.createdAt).toBe("2026-06-30T00:00:00.000Z");
     expect(parsed.selectedRepos).toEqual(["headcodecms/headcodecms"]);
-    expect(parsed.evidence).toHaveLength(7);
-    expect(parsed.evidence.filter((a) => a.proofLevel === "proved")).toHaveLength(6);
+    expect(parsed.evidence).toHaveLength(17);
+    expect(parsed.evidence.filter((a) => a.proofLevel === "proved")).toHaveLength(0);
+    expect(parsed.evidence.filter((a) => a.supportMethod === "exact_source_quotation")).toHaveLength(17);
+    expect(parsed.schemaVersion).toBe(2);
+    expect(parsed.evidencePolicyVersion).toBe("phase2_claim_evidence_v2");
+    expect(parsed.observations.length).toBeGreaterThan(0);
+    expect(parsed.assessments.some((item) => item.status === "supported" && item.assessorOrigin === "engine" && item.evidenceOrigin === "synthetic" && item.subject.repo === "headcodecms/headcodecms" && item.assertion.startsWith("package "))).toBe(true);
+    expect(parsed.coverage.length).toBeGreaterThan(0);
+    expect(parsed.outcome.status).toBe("partial");
+    expect(parsed.outcome.reasons).toContain("synthetic_evidence");
+    expect(parsed.evidenceOrigin).toBe("synthetic_mock");
     // Redaction is enforced on every artifact write: the mock fixture's fake
     // Resend key must never appear in a snapshot.
     expect(raw).not.toContain("re_FAKEFAKEFAKEFAKEFAKE1234");

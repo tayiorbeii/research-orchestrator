@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/candidate_state.schema.json",
+  "title": "CandidateState",
+  "type": "object",
+  "required": ["repo", "state"],
+  "properties": { "repo": { "type": "string", "minLength": 1 }, "state": { "enum": ["uninspected", "inspected", "eligible", "ineligible", "unavailable"] }, "reason": { "type": "string" } }
+}

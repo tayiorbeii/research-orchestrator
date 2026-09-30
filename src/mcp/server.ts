@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { ResearchError } from "../core/errors.js";
+import { ResearchCacheReadError } from "../cache/FileResearchCache.js";
 import {
   findImplementations,
   findImplementationsInputShape,
@@ -14,6 +15,7 @@ import {
   writePlanArtifact,
   writePlanArtifactInputShape,
 } from "./tools/writePlanArtifact.js";
+import { planResearch, planResearchInputShape } from "./tools/planResearch.js";
 
 /**
  * MCP server exposing the research.* tools (docs/08_mcp_tool_spec.md).
@@ -23,6 +25,14 @@ import {
  */
 export function createServer(): McpServer {
   const server = new McpServer({ name: "research-orchestrator", version: "0.1.0" });
+
+  register(
+    server,
+    "research.planResearch",
+    "Draft or revise a structured research brief with host lookup submissions and return readiness or question-scoped vocabulary needs. Planning does not perform provider research.",
+    planResearchInputShape,
+    planResearch,
+  );
 
   register(
     server,
@@ -48,7 +58,7 @@ export function createServer(): McpServer {
   register(
     server,
     "research.writePlanArtifact",
-    "Write research.md, plan.md, evidence.json, and implementation-checklist.md from a research run (inline or cached runId). Artifacts are secret-redacted.",
+    "Write research.md, plan.md, evidence.json, and implementation-checklist.md from a research run (inline or cached runId). Inline observations and assessments are treated as external while receipts are derived; pass runId for engine-verified cached receipts. Artifacts are secret-redacted.",
     writePlanArtifactInputShape,
     writePlanArtifact,
   );
@@ -73,6 +83,8 @@ function register<Shape extends Record<string, import("zod").ZodTypeAny>>(
       const payload =
         error instanceof ResearchError
           ? error.toJSON()
+          : error instanceof ResearchCacheReadError
+            ? { code: error.code, message: error.message, recoverable: error.code !== "unknown_schema_version" }
           : {
               code: "incomplete_results",
               message: (error as Error).message,

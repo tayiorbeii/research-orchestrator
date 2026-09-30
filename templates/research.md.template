@@ -8,6 +8,13 @@
 
 {{summary}}
 
+## Evidence status
+
+The machine-readable evidence receipt carries the run outcome and origin.
+Supported statements require same-subject source observations. Candidate
+ranking, snippets, and confidence scores are discovery context only. Label
+mock evidence as synthetic.
+
 ## Selected repositories
 
 | Repo | Class | Score | Why selected |
@@ -25,6 +32,11 @@
 ## Evidence map
 
 {{evidence_map}}
+
+## Question coverage
+
+Use the receipt's per-question coverage and unresolved obligations when writing
+the open-questions section.
 
 ## Libraries and dependencies
 

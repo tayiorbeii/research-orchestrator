@@ -40,20 +40,25 @@ describe("writeArtifacts", () => {
     ]);
   });
 
+  it("keeps mock origin visible in all four artifact formats", async () => {
+    for (const file of ["research.md", "plan.md", "implementation-checklist.md"]) {
+      expect(await readFile(join(outDir, file), "utf8")).toContain("Synthetic/mock evidence");
+    }
+    const evidence = JSON.parse(await readFile(join(outDir, "evidence.json"), "utf8")) as {
+      evidenceOrigin: string;
+      evidencePolicyVersion: string;
+    };
+    expect(evidence.evidenceOrigin).toBe("synthetic_mock");
+    expect(evidence.evidencePolicyVersion).toBe("phase2_claim_evidence_v2");
+  });
+
   it("research.md contains the required sections and evidence", async () => {
     const research = await readFile(join(outDir, "research.md"), "utf8");
-    for (const section of [
-      "## Goal",
-      "## Selected repositories",
-      "## Candidate analysis",
-      "## Implementation pattern",
-      "## Evidence map",
-      "## Open questions",
-      "## Skeptic notes",
-    ]) {
-      expect(research).toContain(section);
-    }
-    expect(research).toContain("headcodecms/headcodecms");
+    expect(research).toContain("Synthetic/mock evidence");
+    expect(research).toContain("Question coverage");
+    expect(research).toContain("Claim assessments");
+    expect(research).not.toContain("**Server flow**");
+    expect(research).not.toContain("implementation file");
   });
 
   it("evidence.json is valid JSON and every selected repo has >= 3 anchors", async () => {
@@ -70,8 +75,9 @@ describe("writeArtifacts", () => {
 
   it("plan.md includes steps, env var names, and references", async () => {
     const plan = await readFile(join(outDir, "plan.md"), "utf8");
-    expect(plan).toContain("## Step-by-step implementation");
-    expect(plan).toContain("AUTH_RESEND_KEY");
+    expect(plan).toContain("Source quotations establish only what a source states");
+    expect(plan).toContain("No implementation steps are established");
+    expect(plan).not.toContain("AUTH_RESEND_KEY");
     expect(plan).toContain("## References");
     expect(plan).toContain("github.com/headcodecms/headcodecms");
   });

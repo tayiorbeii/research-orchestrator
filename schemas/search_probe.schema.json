@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/search_probe.schema.json",
+  "title": "SearchProbe",
+  "type": "object",
+  "required": ["id", "kind", "query", "rationale"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["high_precision", "recall", "path_targeted", "repo_search"] },
+    "query": { "type": "string", "minLength": 1 },
+    "rationale": { "type": "string" },
+    "expectedSignals": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

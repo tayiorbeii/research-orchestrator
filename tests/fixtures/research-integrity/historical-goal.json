@@ -1,0 +1,4 @@
+{
+  "goal": "Find proven repository implementations of deterministic diff-scoped Python pre-review checks: Ruff strict lint, mypy/pyright gradual baselines, custom AST rules for forbidden vendor imports and sensitive logging, changed-line coverage, and CI/pre-commit parity.",
+  "provenance": "Minimal first-pass goal text transcribed from a private incident record (not published). No other incident research or cache data is included."
+}

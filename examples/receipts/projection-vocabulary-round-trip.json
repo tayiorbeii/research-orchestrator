@@ -1,0 +1,143 @@
+{
+  "synthetic": true,
+  "banner": "SYNTHETIC MOCK RECEIPT — NOT LIVE PROVIDER EVIDENCE",
+  "provenance": "Authored for Phase 6 from synthetic source text; no provider output or external repository was copied.",
+  "fixtureId": "projection-rebuilding",
+  "title": "Event-sourced projection rebuilding",
+  "surface": "brief",
+  "split": "tuning",
+  "prompt": "Find an architecture pattern for rebuilding a projection from events.",
+  "vocabularyRoundTrip": {
+    "initialReadiness": "needs_input",
+    "lookupSourceRef": "synthetic://vocabulary/projection-rebuilding",
+    "lookupOutcome": "succeeded (synthetic vocabulary mapping)",
+    "revisedReadiness": "ready",
+    "revisedTerms": [
+      {
+        "text": "rebuildProjection",
+        "origin": "remote_source_derived",
+        "status": "observed",
+        "sourceRefs": [
+          "synthetic://vocabulary/projection-rebuilding"
+        ]
+      },
+      {
+        "text": "eventStore.readFrom",
+        "origin": "remote_source_derived",
+        "status": "observed",
+        "sourceRefs": [
+          "synthetic://vocabulary/projection-rebuilding"
+        ]
+      }
+    ],
+    "issues": []
+  },
+  "frozenCorpus": [
+    {
+      "sourceId": "projection-positive",
+      "repo": "synthetic/event-ledger",
+      "path": "src/projection.ts",
+      "excerpt": "export async function rebuildProjection() { for await (const event of eventStore.readFrom(0)) await applyProjection(event); }",
+      "label": "relevant"
+    },
+    {
+      "sourceId": "projection-negative",
+      "repo": "synthetic/read-model-only",
+      "path": "src/view.ts",
+      "excerpt": "// A projection is loaded from a snapshot; retained events cannot be replayed.",
+      "label": "negative"
+    },
+    {
+      "sourceId": "projection-noise",
+      "repo": "synthetic/projection-docs",
+      "path": "README.md",
+      "excerpt": "Projection rebuilding is a goal for a future architecture revision.",
+      "label": "noisy"
+    }
+  ],
+  "independentLabels": {
+    "relevantSourceIds": [
+      "projection-positive"
+    ],
+    "supportedFacts": [
+      {
+        "questionId": "projection",
+        "assertionIncludes": "rebuildProjection",
+        "sourceId": "projection-positive"
+      }
+    ],
+    "expectedQuestionCoverage": {
+      "projection": "satisfied"
+    },
+    "expectedUntouchedQuestions": []
+  },
+  "result": {
+    "taskId": "projection-rebuilding",
+    "split": "tuning",
+    "surface": "brief",
+    "intentGroups": [
+      {
+        "questionId": "projection",
+        "intent": "architecture_pattern",
+        "usefulSourcesFound": 1,
+        "relevantSourcesLabeled": 1
+      }
+    ],
+    "supportedClaimPrecision": {
+      "trueSupported": 1,
+      "falseSupported": 0,
+      "labeledSupported": 1,
+      "precision": 1
+    },
+    "unsupportedVerificationCount": {
+      "claimOverclaims": 0,
+      "answerLevelOverclaims": 0,
+      "total": 0
+    },
+    "questionCoverage": {
+      "expected": 1,
+      "satisfied": 1,
+      "byQuestion": [
+        {
+          "questionId": "projection",
+          "expected": "satisfied",
+          "actual": "satisfied"
+        }
+      ],
+      "coverageMatch": true,
+      "coverageMismatchQuestionIds": [],
+      "untouchedRequired": [],
+      "expectedUntouched": [],
+      "untouchedMatch": true
+    },
+    "cost": {
+      "queryCount": 3,
+      "fileReadCount": 3,
+      "msToFirstUsefulObservation": 0,
+      "msToOutcome": 1
+    },
+    "events": {
+      "providerFailures": 0,
+      "partialReads": 0,
+      "budgetStops": 0,
+      "clarificationOrAbstention": 0
+    },
+    "legacyRoundTripLosses": {
+      "count": 11,
+      "fields": [
+        "evidencePolicyVersion",
+        "evidenceOrigin",
+        "observations",
+        "assessments",
+        "coverage",
+        "outcome",
+        "candidateStates",
+        "brief",
+        "compiledProbes",
+        "probeOutcomes",
+        "budgetLedger"
+      ]
+    }
+  },
+  "evaluationLane": "mock_replay"
+}

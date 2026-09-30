@@ -35,9 +35,11 @@ export function normalizeFeatureSpec(goal: string, hints?: Partial<FeatureSpec>)
   // proof requirements and artifacts.
   const profile = goalKind === "application" ? detectFeatureProfile(trimmed) : undefined;
 
-  // Mine every goal so lowercase and previously unknown named systems survive
-  // normalization. Known application profiles still enrich the resulting spec.
-  const keyTerms = extractKeyTerms(trimmed);
+  // Mine technical forms across the full goal while only recognized mappings,
+  // domain concepts, and distinctly styled names survive as anchors.
+  // Keep anchors from the entire request, including technical terms late in a
+  // long sentence; the default cap is generous but bounded for legacy callers.
+  const keyTerms = extractKeyTerms(trimmed, 128);
   const { products, behaviors } = partitionKeyTerms(keyTerms);
 
   const draft: FeatureSpecDraft = {

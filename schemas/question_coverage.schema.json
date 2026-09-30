@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/question_coverage.schema.json",
+  "title": "QuestionCoverage",
+  "type": "object",
+  "required": ["questionId", "status", "supportedClaimIds", "partialClaimIds", "contradictedClaimIds", "unsatisfiedObligations", "uninspectedCandidates", "unavailableSources", "suggestedNextActions"],
+  "properties": {
+    "questionId": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["satisfied", "partial", "unresolved", "not_attempted"] },
+    "supportedClaimIds": { "type": "array", "items": { "type": "string" } },
+    "partialClaimIds": { "type": "array", "items": { "type": "string" } },
+    "contradictedClaimIds": { "type": "array", "items": { "type": "string" } },
+    "unsatisfiedObligations": { "type": "array", "items": { "type": "string" } },
+    "uninspectedCandidates": { "type": "array", "items": { "type": "string" } },
+    "unavailableSources": { "type": "array", "items": { "type": "string" } },
+    "suggestedNextActions": { "type": "array", "items": { "type": "string" } }
+  }
+}

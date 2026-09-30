@@ -8,7 +8,9 @@
       "convexAuth",
       "Resend provider",
       "convex/auth.ts"
-    ]
+    ],
+    "synthetic": true,
+    "provenance": "Illustrative search-probe fixture; this query is not a recorded provider result."
   },
   {
     "id": "hp_client_signin_resend_single",
@@ -18,7 +20,9 @@
     "expectedSignals": [
       "useAuthActions",
       "signIn('resend'"
-    ]
+    ],
+    "synthetic": true,
+    "provenance": "Illustrative search-probe fixture; this query is not a recorded provider result."
   },
   {
     "id": "hp_client_signin_resend_double",
@@ -28,7 +32,9 @@
     "expectedSignals": [
       "useAuthActions",
       "signIn(\"resend\""
-    ]
+    ],
+    "synthetic": true,
+    "provenance": "Illustrative search-probe fixture; this query is not a recorded provider result."
   },
   {
     "id": "hp_middleware",
@@ -38,7 +44,9 @@
     "expectedSignals": [
       "middleware/proxy",
       "route protection"
-    ]
+    ],
+    "synthetic": true,
+    "provenance": "Illustrative search-probe fixture; this query is not a recorded provider result."
   },
   {
     "id": "recall_auth_resend",
@@ -48,7 +56,9 @@
     "expectedSignals": [
       "dependency proof",
       "provider proof"
-    ]
+    ],
+    "synthetic": true,
+    "provenance": "Illustrative search-probe fixture; this query is not a recorded provider result."
   },
   {
     "id": "path_auth_ts",
@@ -58,6 +68,8 @@
     "expectedSignals": [
       "convex/auth.ts",
       "Resend"
-    ]
+    ],
+    "synthetic": true,
+    "provenance": "Illustrative search-probe fixture; this query is not a recorded provider result."
   }
 ]

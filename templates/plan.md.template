@@ -8,6 +8,11 @@
 
 {{recommended_approach}}
 
+## Evidence status and unresolved questions
+
+Use the machine-readable receipt's run outcome and per-question coverage.
+Preserve unresolved required questions. Mark mock evidence as synthetic.
+
 ## Files to create or modify
 
 {{files_to_modify}}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/probe_outcome.schema.json",
+  "title": "ProbeOutcome",
+  "type": "object",
+  "required": ["probeId", "status", "resultIds", "queryUnits", "requestCount", "predecessorProbeIds"],
+  "properties": {
+    "probeId": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["not_attempted", "succeeded", "failed"] },
+    "resultClass": { "enum": ["empty", "relevant_leads", "noisy", "pagination_limit"] },
+    "basis": { "type": "string" },
+    "errorClass": { "type": "string" },
+    "failureKind": { "enum": ["transport_failure", "access_denied", "pagination_limit"] },
+    "truncated": { "type": "boolean" },
+    "resultIds": { "type": "array", "items": { "type": "string" } },
+    "queryUnits": { "type": "integer", "minimum": 0 },
+    "requestCount": { "type": "integer", "minimum": 0 },
+    "durationMs": { "type": "number", "minimum": 0 },
+    "reason": { "type": "string" },
+    "predecessorProbeIds": { "type": "array", "items": { "type": "string" } }
+  },
+  "allOf": [{ "if": { "properties": { "status": { "const": "succeeded" } }, "required": ["status"] }, "then": { "required": ["resultClass", "basis"] } }],
+  "additionalProperties": false
+}

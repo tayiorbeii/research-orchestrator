@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/scored_candidate.schema.json",
+  "title": "ScoredCandidate",
+  "type": "object",
+  "required": ["repo", "score", "class", "positiveSignals", "negativeSignals", "missingProof", "rejectionReasons", "nextAction"],
+  "properties": {
+    "repo": { "type": "string", "minLength": 1 },
+    "score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "class": { "enum": ["production", "reference", "docs", "template", "toy", "false_positive", "unknown"] },
+    "positiveSignals": { "type": "array", "items": { "$ref": "candidate_repo.schema.json#/properties/candidateSignals/items" } },
+    "negativeSignals": { "type": "array", "items": { "$ref": "candidate_repo.schema.json#/properties/candidateSignals/items" } },
+    "missingProof": { "type": "array", "items": { "type": "string" } },
+    "rejectionReasons": { "type": "array", "items": { "enum": ["no_dependency_proof", "no_implementation_files", "docs_only", "toy_demo", "archived", "stale_dependency", "ambiguous_feature", "conflicting_evidence", "private_or_unreadable", "rate_limited_or_incomplete"] } },
+    "nextAction": { "enum": ["reject", "read_more", "deepwiki", "clone", "extract"] }
+  },
+  "additionalProperties": false
+}

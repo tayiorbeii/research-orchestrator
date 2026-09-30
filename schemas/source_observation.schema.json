@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/source_observation.schema.json",
+  "title": "SourceObservation",
+  "type": "object",
+  "required": ["id", "kind", "revisionStatus", "retrievedAt", "retrievalMethod", "readStatus", "origin"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["repository_file", "repository_metadata", "documentation_page", "issue_proposal", "local_artifact", "synthetic_fixture"] },
+    "repo": { "type": "string" }, "url": { "type": "string" }, "issueState": { "enum": ["open", "closed"] }, "path": { "type": "string" },
+    "requestedRevision": { "type": "string" }, "resolvedRevision": { "type": "string" },
+    "revisionStatus": { "enum": ["immutable", "moving_ref", "unknown"] },
+    "excerpt": { "type": "string" }, "startLine": { "type": "integer", "minimum": 1 },
+    "endLine": { "type": "integer", "minimum": 1 }, "retrievedAt": { "type": "string" },
+    "contentHash": { "type": "string" }, "provider": { "enum": ["octocode", "github", "deepwiki", "local", "mock"] },
+    "retrievalMethod": { "type": "string", "minLength": 1 },
+    "readStatus": { "enum": ["complete", "partial", "unavailable", "failed"] },
+    "offsetStart": { "type": "integer", "minimum": 0 }, "offsetSemantics": { "type": "string" },
+    "truncationNotice": { "type": "string" }, "origin": { "enum": ["engine", "external", "legacy", "synthetic"] },
+    "redacted": { "type": "boolean" }, "redactionNotes": { "type": "array", "items": { "type": "string" } },
+    "anchor": { "$ref": "evidence_anchor.schema.json" }
+  }
+}

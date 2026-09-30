@@ -4,4 +4,7 @@ export * from "./evidenceAnchor.js";
 export * from "./candidateRepo.js";
 export * from "./scoredCandidate.js";
 export * from "./researchRun.js";
+export * from "./researchContracts.js";
+export * from "./researchBrief.js";
+export * from "./searchProbeV2.js";
 export * from "./planArtifact.js";

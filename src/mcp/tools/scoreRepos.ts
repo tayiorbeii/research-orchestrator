@@ -5,6 +5,7 @@ import {
   FeatureSpecSchema,
 } from "../../schemas/index.js";
 import { scoreCandidate } from "../../core/scoreCandidate.js";
+import { downgradeImportedAnchor } from "../../core/evidencePolicy.js";
 
 export const scoreReposInputShape = {
   featureSpec: FeatureSpecSchema.describe("Feature spec produced by research.findImplementations."),
@@ -22,12 +23,19 @@ export type ScoreReposInput = z.infer<typeof InputSchema>;
 /** research.scoreRepos — score existing candidates against a feature spec. */
 export async function scoreRepos(input: ScoreReposInput) {
   const parsed = InputSchema.parse(input);
-  const evidence = parsed.evidence ?? [];
+  const evidence = (parsed.evidence ?? []).map(downgradeImportedAnchor);
 
   const scoredCandidates = parsed.candidates.map((candidate) =>
     scoreCandidate(
       parsed.featureSpec,
-      candidate,
+      {
+        ...candidate,
+        candidateSignals: candidate.candidateSignals.map((signal) => ({
+          ...signal,
+          confidence: Math.min(signal.confidence, 0.49),
+          evidence: signal.evidence?.map(downgradeImportedAnchor),
+        })),
+      },
       evidence.filter((a) => !a.repo || a.repo === candidate.repo),
     ),
   );

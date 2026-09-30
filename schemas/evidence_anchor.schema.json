@@ -60,6 +60,14 @@
         "partial",
         "proved"
       ]
+    },
+    "evidencePolicyVersion": {
+      "type": "string",
+      "enum": ["phase1_exact_quotation_v1", "phase2_claim_evidence_v2", "legacy_unvalidated"]
+    },
+    "supportMethod": {
+      "type": "string",
+      "enum": ["exact_source_quotation"]
     }
   }
 }

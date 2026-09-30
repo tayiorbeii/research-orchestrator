@@ -1,104 +1,90 @@
-# Research: email magic-link authentication
+> **Synthetic/mock evidence:** fixture observations are not live repository findings.
+
+# Research: email magic-link authentication (PARTIAL)
+
+> ⚠ **This run is PARTIAL.** No fully evidence-backed conclusion was reached.
+> The sections below describe what was searched and why proof remained incomplete — they are
+> diagnostics, not verified findings. Do not present this as completed research.
 
 ## Goal
 
 Next.js + Convex app with email magic links via Resend
 
+## Status
+
+- **Status:** `partial`
+- **Reasons:** 1 required question(s) remain unsatisfied., synthetic_evidence
+- Candidates evaluated: 2
+- Repositories selected: 1
+- Evidence anchors: 17
+
 ## Summary
 
-Run `run_mock_next_convex_magic_link_auth` evaluated 2 candidate repo(s) against 4 proof requirement(s), selected 1 repo(s), and captured 7 evidence anchor(s) (6 proved).
+Run `run_mock_next_convex_magic_link_auth` evaluated 2 candidate(s), selected
+1 repository/repositories, and captured 17
+evidence anchor(s), but did not satisfy the complete proof contract. This is
+**not** proof that the answer is negative. Treat these artifacts as diagnostics,
+not completed findings.
 
-## Selected repositories
+## Question coverage
 
-| Repo | Class | Score | Why selected |
-|---|---:|---:|---|
-| [headcodecms/headcodecms](https://github.com/headcodecms/headcodecms) | production | 0.85 | dependency_proof, multi_file_implementation, framework_convention_proof, runtime_flow_proof |
+- `question_dependency_proof`: **satisfied**; supported claims: claim_dependency_proof_headcodecms_headcodecms_next, claim_dependency_proof_headcodecms_headcodecms_convex, claim_dependency_proof_headcodecms_headcodecms__convex-dev_auth, claim_dependency_proof_headcodecms_headcodecms__auth_core, claim_dependency_proof_headcodecms_headcodecms_resend; open obligations: none
+- `question_server_auth_proof`: **satisfied**; supported claims: claim_server_auth_proof_headcodecms_headcodecms; open obligations: none
+- `question_client_flow_proof`: **unresolved**; supported claims: none; open obligations: Client login flow calls useAuthActions().signIn for email link.
+- `question_route_protection_proof`: **satisfied**; supported claims: claim_route_protection_proof_headcodecms_headcodecms; open obligations: none
 
-## Candidate analysis
+## Claim assessments
 
-### headcodecms/headcodecms
-- Class: `production` — Score: **0.85** — Next action: `extract`
-- Positive signals: dependency_proof, multi_file_implementation, framework_convention_proof, runtime_flow_proof, production_shaped
-- Negative signals: none
-- Evidence anchors: 6
-- Missing proof: none
+- `claim_dependency_proof_headcodecms_headcodecms_next` (headcodecms/headcodecms, dependency_declaration): **supported** — The parsed declaration matches the package name and literal constraint in the same-subject observation.
+- `claim_dependency_proof_headcodecms_headcodecms_convex` (headcodecms/headcodecms, dependency_declaration): **supported** — The parsed declaration matches the package name and literal constraint in the same-subject observation.
+- `claim_dependency_proof_headcodecms_headcodecms__convex-dev_auth` (headcodecms/headcodecms, dependency_declaration): **supported** — The parsed declaration matches the package name and literal constraint in the same-subject observation.
+- `claim_dependency_proof_headcodecms_headcodecms__auth_core` (headcodecms/headcodecms, dependency_declaration): **supported** — The parsed declaration matches the package name and literal constraint in the same-subject observation.
+- `claim_dependency_proof_headcodecms_headcodecms_resend` (headcodecms/headcodecms, dependency_declaration): **supported** — The parsed declaration matches the package name and literal constraint in the same-subject observation.
+- `claim_dependency_proof_justinwlin_convex-magic-link-authentication_next` (justinwlin/convex-magic-link-authentication, dependency_declaration): **not_assessed** — No same-repository, matching-revision observation was available for the asserted file.
+- `claim_dependency_proof_justinwlin_convex-magic-link-authentication_convex` (justinwlin/convex-magic-link-authentication, dependency_declaration): **not_assessed** — No same-repository, matching-revision observation was available for the asserted file.
+- `claim_dependency_proof_justinwlin_convex-magic-link-authentication__convex-dev_auth` (justinwlin/convex-magic-link-authentication, dependency_declaration): **not_assessed** — No same-repository, matching-revision observation was available for the asserted file.
+- `claim_dependency_proof_justinwlin_convex-magic-link-authentication__auth_core` (justinwlin/convex-magic-link-authentication, dependency_declaration): **not_assessed** — No same-repository, matching-revision observation was available for the asserted file.
+- `claim_dependency_proof_justinwlin_convex-magic-link-authentication_resend` (justinwlin/convex-magic-link-authentication, dependency_declaration): **not_assessed** — No same-repository, matching-revision observation was available for the asserted file.
+- `claim_server_auth_proof_headcodecms_headcodecms` (headcodecms/headcodecms, exact_source_quotation): **supported** — One same-subject source observation from the requested path contains every required quotation signal.
+- `claim_server_auth_proof_justinwlin_convex-magic-link-authentication` (justinwlin/convex-magic-link-authentication, exact_source_quotation): **unsupported** — The same-subject observations did not pass the Phase 1 exact quotation policy for this assertion.
+- `claim_client_flow_proof_headcodecms_headcodecms` (headcodecms/headcodecms, exact_source_quotation): **unsupported** — The same-subject observations did not pass the Phase 1 exact quotation policy for this assertion.
+- `claim_client_flow_proof_justinwlin_convex-magic-link-authentication` (justinwlin/convex-magic-link-authentication, exact_source_quotation): **unsupported** — The same-subject observations did not pass the Phase 1 exact quotation policy for this assertion.
+- `claim_route_protection_proof_headcodecms_headcodecms` (headcodecms/headcodecms, exact_source_quotation): **supported** — One same-subject source observation from the requested path contains every required quotation signal.
+- `claim_route_protection_proof_justinwlin_convex-magic-link-authentication` (justinwlin/convex-magic-link-authentication, exact_source_quotation): **unsupported** — The same-subject observations did not pass the Phase 1 exact quotation policy for this assertion.
 
-### justinwlin/convex-magic-link-authentication
-- Class: `docs` — Score: **0.00** — Next action: `reject`
-- Positive signals: env_deployment_docs
-- Negative signals: docs_only, no_exact_evidence
-- Evidence anchors: 1
-- Missing proof:
-  - dependency_proof: package.json proves Next.js, Convex, Convex Auth, and email provider dependencies.
-  - server_auth_proof: Convex auth provider configured with Resend or equivalent email provider.
-  - client_flow_proof: Client login flow calls useAuthActions().signIn for email link.
-  - route_protection_proof: Middleware/proxy protects routes using Convex auth.
-- Rejection reasons: docs_only, no_dependency_proof, no_implementation_files
+## Run outcome
 
-## Implementation pattern
+- **partial** — 1 required question(s) remain unsatisfied.; synthetic_evidence
 
-**Server flow**
-- convex/auth.ts exports convexAuth({ providers: [Resend({ ... })] })
-- convex/http.ts wires auth routes via auth.addHttpRoutes(http)
-- convex/auth.config.ts declares the auth provider domain/application ID
-- Magic-link email is sent by the Resend provider with a callback URL back to the Convex site
+## What was searched
 
-**Client flow**
-- App is wrapped in ConvexAuthNextjsServerProvider (server) and ConvexAuthNextjsProvider (client)
-- Login page calls useAuthActions().signIn("resend", formData) with the user email
-- UI shows a 'check your email' state after sending the link
-- Clicking the emailed link completes sign-in and redirects to the app
+- [high_precision] "convexAuth" "Resend" — Find exact anchors for: Convex auth provider configured with Resend or equivalent email provider.
+- [high_precision] "useAuthActions" "signIn('resend'" — Find exact anchors for: Client login flow calls useAuthActions().signIn for email link.
+- [high_precision] "convexAuthNextjsMiddleware" "createRouteMatcher" — Find exact anchors for: Middleware/proxy protects routes using Convex auth.
+- [recall] "@convex-dev/auth" "Resend" — Find repos combining @convex-dev/auth with Resend, even with unusual formatting.
+- [recall] "@auth/core" "Resend" — Find repos combining @auth/core with Resend, even with unusual formatting.
+- [path_targeted] "Resend(" path:convex/auth.ts — Find conventional implementations inside convex/auth.ts.
+- [path_targeted] "convexAuth" path:convex/http.ts — Find conventional implementations inside convex/http.ts.
+- [path_targeted] "Resend(" path:convex/auth.config.ts — Find conventional implementations inside convex/auth.config.ts.
+- [path_targeted] "convexAuthNextjsMiddleware" path:middleware.ts — Find conventional implementations inside middleware.ts.
+- [repo_search] Next.js Convex email magic-link authentication — Discover repos by name/topic/readme when code search misses.
 
-**Route protection**
-- middleware.ts / src/middleware.ts / proxy.ts uses convexAuthNextjsMiddleware
-- createRouteMatcher defines which routes require authentication
-- Unauthenticated users are redirected to the login page
+## Open questions (unresolved)
 
-## Evidence map
+- Why did this run fail to produce evidence? Inspect the diagnostics and probes.
 
-### headcodecms/headcodecms
+## Recovery steps
 
-- `app/(admin)/admin/login/page.tsx:14` [server_auth_proof, proved] — `void signIn('resend', formData).then(() => setSent(true));` ([link](https://github.com/headcodecms/headcodecms/blob/main/app/(admin)/admin/login/page.tsx#L14))
-- `app/(admin)/admin/login/page.tsx:2` [client_flow_proof, proved] — `import { useAuthActions } from "@convex-dev/auth/react";` ([link](https://github.com/headcodecms/headcodecms/blob/main/app/(admin)/admin/login/page.tsx#L2))
-- `convex/auth.ts:1` [server_auth_proof, proved] — `import { convexAuth } from "@convex-dev/auth/server";` ([link](https://github.com/headcodecms/headcodecms/blob/main/convex/auth.ts#L1))
-- `package.json:5` [dependency_proof, proved] — `"next": "^15.0.0",` ([link](https://github.com/headcodecms/headcodecms/blob/main/package.json#L5))
-- `proxy.ts:9` [server_auth_proof, proved] — `export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {` ([link](https://github.com/headcodecms/headcodecms/blob/main/proxy.ts#L9))
-- `proxy.ts:2` [route_protection_proof, proved] — `convexAuthNextjsMiddleware,` ([link](https://github.com/headcodecms/headcodecms/blob/main/proxy.ts#L2))
+- Inspect research.md "What was searched" to confirm probes targeted the right entities.
+- If discovery missed the project, add the official repo/docs URL as an explicit hint or candidate.
+- Provide structured hints (requiredConcepts, likelyFiles, proofRequirements) for novel domains.
+- Re-run into a new output directory and compare; do not overwrite inconclusive artifacts.
 
-## Libraries and dependencies
+## Diagnostics (warnings)
 
-- `next`
-- `convex`
-- `@convex-dev/auth`
-- `@auth/core`
-- `resend`
-
-## Files likely needed in target project
-
-- `package.json` — dependency manifest (proved in 1 anchor)
-- `convex/auth.ts` — server auth configuration (proved in 1 anchor)
-- `convex/http.ts` — http route wiring
-- `convex/auth.config.ts` — auth provider config
-- `middleware.ts` — route protection
-- `proxy.ts` — route protection (proved in 2 anchors)
-- `src/middleware.ts` — route protection
-- `app/(admin)/admin/login/page.tsx` — server_auth_proof (proved in 1 anchor)
-
-## Pitfalls and edge cases
-
-- Missing auth.addHttpRoutes(http) in convex/http.ts silently breaks the callback flow
-- AUTH_RESEND_KEY must be set on the Convex deployment, not just the Next.js app
-- middleware matcher must exclude static assets and the auth callback routes
-- Magic-link callback URL must match the deployed site URL in production
-- Do not confuse @convex-dev/auth with next-auth adapters — the wiring differs
-
-## Open questions
-
-- None outstanding.
+- none
 
 ## Skeptic notes
 
-- Verify every accepted repo actually implements the feature end to end.
-- Confirm no docs-only repo was misclassified as implementation proof.
-- Re-check anchors against live repository contents before relying on them.
-
+- A non-complete run must never be presented as completed research.
+- Re-run after fixing the highest-priority reason above before drawing any conclusion.

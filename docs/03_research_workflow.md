@@ -1,6 +1,63 @@
 # 03 Research Workflow
 
+## Current brief-first execution
+
+The v2 path is the authoritative workflow. `plan` creates or revises a
+`ResearchBrief`; `find --brief` executes its required questions, obligations,
+source policy, and budgets. Results preserve observations, claim assessments,
+question coverage, provider outcomes, and budget consumption in a v2 run.
+Candidate ranking and selected repository lists are discovery aids, not proof.
+Only claims supported by the run's same-subject source observations are
+reported as supported.
+
 ## Workflow summary
+
+The brief workflow has two explicit operations: `plan` drafts/revises a
+bounded brief, then `find --brief` executes that brief through the configured
+provider. Planning reports `needs_input` and question-scoped vocabulary work
+when the request lacks grounded terms or a bounded evidence scope; it does not
+claim a web lookup occurred. A host can perform authorized lookups and submit
+source references, acquired terms, and failed lookup outcomes in a revised
+brief before execution. The host's external lookup cost is provenance, not
+engine-measured budget consumption.
+
+An abstract request returns `readiness.status: "needs_input"` with a `lookupNeeds`
+entry for each affected question: the kind of lookup needed, suggested source
+kinds, and the remaining reconnaissance allowance. Submit `{ "terms": [],
+"lookupOutcomes": [] }` to `plan --brief ... --submit ...` after the host lookup.
+Terms become `observed` only when `sourceRefs` cite a successful submitted
+lookup; unsourced terms remain visible `planner_hypothesis` proposals. Submit
+failed or denied attempts as `status: "failed"`; they remain planning gaps and
+never mean a capability is absent. A revision records its parent id/revision,
+keeps the original question statements fixed, and can be passed to `find` only
+when ready.
+
+`plan --request` may also name explicit `localArtifacts` paths or inline
+`snippets`. The planner reads only those paths and extracts narrow import, API,
+configuration, and CLI fingerprints. Sensitive literals and user identifiers
+are redacted or omitted before terms are created. Private package names and
+internal symbols carry `egress: "restricted"`; they are omitted from outbound
+probes unless `egressPolicy.allowRestrictedLocalTerms` is explicitly true.
+
+```sh
+research-orchestrator plan --request request.json --out brief.json
+research-orchestrator plan --brief brief.json --submit submission.json --out revised-brief.json
+research-orchestrator find --brief brief.json --out .research/run --mode mock
+research-orchestrator find --resume RUN_ID --brief revised-brief.json --out .research/resume --mode mock
+```
+
+`find --goal` remains as a compatibility adapter, but now uses the same brief
+engine. Its conservative vocabulary policy intentionally tightens behavior:
+unsupported vague goals return `needs_input` instead of generating generic
+searches. The selected provider mode stays visible; an explicit live mode never
+falls back to mock. Mock runs are synthetic fixtures and are labeled as such.
+
+## Compatibility staged workflow
+
+The following stages describe the original candidate-oriented flow. They remain
+useful as a high-level explanation of discovery, but they are not the v2 proof
+contract. In particular, ranking scores, snippets, keyword overlap, and
+incoming confidence do not verify claims.
 
 ```text
 1. Normalize the feature

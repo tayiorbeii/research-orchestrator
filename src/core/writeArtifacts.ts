@@ -9,12 +9,15 @@ import type {
 import { ResearchError } from "./errors.js";
 import { extractPattern, type ExtractedPattern } from "./extractPattern.js";
 import { getMissingRequiredProof } from "./scoreCandidate.js";
-import { redactSecrets } from "./redact.js";
+import { downgradeAnchorsForRedactedObservations, redactArtifactContent, redactResearchRun } from "./redact.js";
+import { EVIDENCE_POLICY_VERSION, isExactQuotationSupport } from "./evidencePolicy.js";
+import { deriveCoverage } from "./assessment/coverage.js";
+import { deriveBriefCoverage } from "./assessment/briefCoverage.js";
 
 export interface WriteArtifactsOptions {
   /** Exact evidence anchors gathered during the run. */
   evidence?: EvidenceAnchor[];
-  /** Pre-computed pattern; derived from the run when omitted. */
+  /** @deprecated Phase 1 ignores imported patterns and recomputes a conservative view. */
   pattern?: ExtractedPattern;
   formats?: Array<"research_md" | "plan_md" | "evidence_json" | "checklist_md">;
 }
@@ -31,10 +34,25 @@ export async function writeArtifacts(
   outDir: string,
   options: WriteArtifactsOptions = {},
 ): Promise<ArtifactRef[]> {
+  run = redactResearchRun(run);
+  // Brief runs re-derive coverage from the brief's own questions, exactly as the engine
+  // did; the FeatureSpec projection has different question ids and would disagree.
+  const derived = run.schemaVersion !== 2 ? undefined : run.brief ? deriveBriefCoverage({
+    brief: run.brief, candidateRepos: run.candidates.map((candidate) => candidate.repo),
+    observations: run.observations ?? [], assessments: run.assessments ?? [],
+    probes: run.probesV2 ?? run.compiledProbes ?? [], probeOutcomes: run.probeOutcomes ?? [], providerName: run.providerName,
+  }) : deriveCoverage({
+    spec: run.featureSpec, candidates: run.candidates.map((candidate) => candidate.repo),
+    states: run.candidateStates ?? [], observations: run.observations ?? [], assessments: run.assessments ?? [],
+  });
+  const outcome = derived && run.schemaVersion === 2
+    ? { ...derived.outcome, reasons: [...new Set([...derived.outcome.reasons, ...(run.outcome?.reasons ?? [])])] }
+    : undefined;
+  const receiptRun: ResearchRun = derived && run.schemaVersion === 2
+    ? { ...run, coverage: derived.coverage, outcome: outcome! } : run;
   const formats = options.formats ?? [...ALL_FORMATS];
-  const evidence = options.evidence ?? collectRunAnchors(run);
-  const pattern =
-    options.pattern ?? extractPattern(run.featureSpec, run.scoredCandidates, evidence);
+  const evidence = downgradeAnchorsForRedactedObservations(options.evidence ?? collectRunAnchors(run), run.observations ?? []);
+  const pattern = extractPattern(receiptRun.featureSpec, receiptRun.scoredCandidates, evidence);
 
   try {
     await mkdir(outDir, { recursive: true });
@@ -54,28 +72,44 @@ export async function writeArtifacts(
     content: string,
   ): Promise<void> => {
     const path = join(outDir, file);
-    await writeFile(path, redactSecrets(content), "utf8");
+    await writeFile(path, redactArtifactContent(file, content), "utf8");
     refs.push({ path, kind, createdAt });
   };
 
-  const status = deriveRunStatus(run, evidence);
+  const status = deriveRunStatus(receiptRun, evidence);
   if (formats.includes("research_md")) {
-    await writeOne("research.md", "research", renderResearchMd(run, evidence, pattern, status));
+    await writeOne("research.md", "research", withMockOrigin(receiptRun, evidence, renderResearchMd(receiptRun, evidence, pattern, status)));
   }
   if (formats.includes("plan_md")) {
-    await writeOne("plan.md", "plan", renderPlanMd(run, evidence, pattern, status));
+    await writeOne("plan.md", "plan", withMockOrigin(receiptRun, evidence, renderPlanMd(receiptRun, evidence, pattern, status)));
   }
   if (formats.includes("evidence_json")) {
-    await writeOne("evidence.json", "evidence", renderEvidenceJson(run, evidence, status));
+    await writeOne("evidence.json", "evidence", renderEvidenceJson(receiptRun, evidence, status));
   }
   if (formats.includes("checklist_md")) {
     await writeOne(
       "implementation-checklist.md",
       "checklist",
-      renderChecklistMd(run, evidence, pattern, status),
+      withMockOrigin(receiptRun, evidence, renderChecklistMd(receiptRun, evidence, pattern, status)),
     );
   }
   return refs;
+}
+
+function withMockOrigin(run: ResearchRun, evidence: EvidenceAnchor[], content: string): string {
+  return hasMockOrigin(run, evidence)
+    ? `> **Synthetic/mock evidence:** fixture observations are not live repository findings.\n\n${content}`
+    : content;
+}
+
+function hasMockOrigin(run: ResearchRun, evidence: EvidenceAnchor[]): boolean {
+  return (
+    run.evidenceOrigin === "synthetic_mock" ||
+    run.assessments?.some((assessment) => assessment.evidenceOrigin === "synthetic") === true ||
+    evidence.some((anchor) => anchor.provider === "mock") ||
+    run.candidates.some((candidate) => candidate.candidateSignals.some((signal) => signal.source === "mock")) ||
+    run.explanations.some((explanation) => explanation.source === "mock")
+  );
 }
 
 function collectRunAnchors(run: ResearchRun): EvidenceAnchor[] {
@@ -118,7 +152,7 @@ function renderResearchMd(
   pattern: ExtractedPattern,
   status: RunStatus,
 ): string {
-  if (status.status === "inconclusive") return renderInconclusiveResearchMd(run, evidence, status);
+  if (status.status !== "complete") return renderInconclusiveResearchMd(run, evidence, status);
   const spec = run.featureSpec;
   const scored = run.scoredCandidates;
   const selected = run.selectedRepos;
@@ -168,17 +202,6 @@ function renderResearchMd(
     .join("\n\n");
 
   const map = pattern.implementationMap;
-  const implementationPattern = [
-    "**Server flow**",
-    ...map.serverFlow.map((s) => `- ${s}`),
-    "",
-    "**Client flow**",
-    ...map.clientFlow.map((s) => `- ${s}`),
-    ...(map.routeProtection && map.routeProtection.length > 0
-      ? ["", "**Route protection**", ...map.routeProtection.map((s) => `- ${s}`)]
-      : []),
-  ].join("\n");
-
   const targetFiles = map.files
     .map((f) => `- \`${f.path}\` — ${f.role}${f.evidence.length > 0 ? ` (proved in ${f.evidence.length} anchor${f.evidence.length === 1 ? "" : "s"})` : ""}`)
     .join("\n");
@@ -191,7 +214,7 @@ ${run.goal}
 
 ## Summary
 
-Run \`${run.id}\` evaluated ${run.candidates.length} candidate repo(s) against ${spec.proofRequirements.length} proof requirement(s), selected ${selected.length} repo(s), and captured ${evidence.length} evidence anchor(s) (${evidence.filter((a) => a.proofLevel === "proved").length} proved).
+Run \`${run.id}\` evaluated ${run.candidates.length} candidate repo(s) against ${spec.proofRequirements.length} source-observation requirement(s), selected ${selected.length} repo(s), and captured ${evidence.length} evidence anchor(s) (${evidence.filter(isExactQuotationSupport).length} exact-quotation supports).
 
 ## Selected repositories
 
@@ -199,13 +222,15 @@ Run \`${run.id}\` evaluated ${run.candidates.length} candidate repo(s) against $
 |---|---:|---:|---|
 ${selectedTable || "| _none_ | - | - | no candidates met the selection threshold |"}
 
+${run.schemaVersion === 2 && run.brief ? renderWhatWasSearched(run) : ""}
+
 ## Candidate analysis
 
 ${candidateAnalysis || "_No candidates analyzed._"}
 
-## Implementation pattern
+## Phase 1 interpretation
 
-${implementationPattern}
+Exact source quotations support only that the cited source states the quoted text. They do not establish that an implementation works or provide a pattern to copy.
 
 ## Evidence map
 
@@ -213,7 +238,7 @@ ${evidenceMap || "_No evidence collected._"}
 
 ## Libraries and dependencies
 
-${map.dependencies.map((d) => `- \`${d}\``).join("\n") || "_None identified._"}
+${map.dependencies.map((d) => `- \`${d}\``).join("\n") || "_No dependency declarations were established by the source quotations._"}
 
 ## Files likely needed in target project
 
@@ -225,7 +250,7 @@ ${map.pitfalls.map((p) => `- ${p}`).join("\n")}
 
 ## Open questions
 
-${pattern.openQuestions.map((q) => `- ${q}`).join("\n") || "- None outstanding."}
+${pattern.openQuestions.map((q) => `- ${q}`).join("\n") || "- Runtime behavior, surrounding control flow, and implementation suitability remain unassessed in Phase 1."}
 
 ## Skeptic notes
 
@@ -242,7 +267,7 @@ function renderPlanMd(
   pattern: ExtractedPattern,
   status: RunStatus,
 ): string {
-  if (status.status === "inconclusive") return renderInconclusivePlanMd(run, evidence, status);
+  if (status.status !== "complete") return renderInconclusivePlanMd(run, evidence, status);
   const spec = run.featureSpec;
   const map = pattern.implementationMap;
   const byRepo = scoredByRepo(run);
@@ -271,7 +296,7 @@ ${run.goal}
 
 ## Recommended approach
 
-Follow the pattern proved by ${run.selectedRepos.length} selected repo(s). Dependencies: ${map.dependencies.map((d) => `\`${d}\``).join(", ") || "none identified"}.
+Phase 1 established source quotations only. It did not establish an implementation pattern, dependencies to install, or steps to copy.
 
 ## Files to create or modify
 
@@ -281,25 +306,23 @@ ${filesTable || "| _none identified_ | - | - |"}
 
 ## Step-by-step implementation
 
-${pattern.implementationSteps.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+${pattern.implementationSteps.map((s, i) => `${i + 1}. ${s}`).join("\n") || "No implementation steps are established by source quotations."}
 
 ## Environment variables
 
 ${
   map.environmentVariables.length > 0
     ? map.environmentVariables.map((v) => `- \`${v}\` (name only — set the value in your secret store)`).join("\n")
-    : "- None identified. Verify against the selected repos' README/env docs."
+    : "- No environment requirements are established by source quotations."
 }
 
 ## Testing plan
 
-${(map.tests ?? ["Add unit tests for the new flow.", "Add one integration/e2e path.", "Run a manual smoke test."]).map((t) => `- ${t}`).join("\n")}
+${(map.tests ?? []).map((t) => `- ${t}`).join("\n") || "No implementation test plan is established by source quotations."}
 
 ## Rollback plan
 
-- Land the change behind a small, isolated commit series so a single revert removes the feature.
-- Keep the previous auth/feature path working until the new flow passes smoke tests.
-- Document the env vars added so they can be removed cleanly on rollback.
+No rollback guidance is established by the source quotations.
 
 ## Dependencies
 
@@ -322,6 +345,10 @@ function renderEvidenceJson(
 ): string {
   const payload = {
     runId: run.id,
+    evidencePolicyVersion: run.evidencePolicyVersion ?? "legacy_unvalidated",
+    evidenceOrigin: hasMockOrigin(run, evidence)
+      ? "synthetic_mock"
+      : (run.evidenceOrigin ?? "legacy_unvalidated"),
     createdAt: run.createdAt,
     goal: run.goal,
     featureKey: run.featureSpec.featureKey,
@@ -329,24 +356,70 @@ function renderEvidenceJson(
     statusReasons: status.reasons,
     selectedRepos: run.selectedRepos,
     scoredCandidates: run.scoredCandidates,
+    schemaVersion: run.schemaVersion,
+    ...(run.schemaVersion === 2 && run.brief ? { brief: { id: run.brief.id, revision: run.brief.revision } } : {}),
+    ...(run.schemaVersion === 2 && run.brief ? { probes: run.probesV2 ?? run.compiledProbes ?? [] } : {}),
+    ...(run.schemaVersion === 2 && run.brief ? { probeOutcomes: run.probeOutcomes ?? [] } : {}),
+    ...(run.schemaVersion === 2 && run.brief ? { budgetLedger: run.budgetLedger } : {}),
+    observations: run.observations,
+    assessments: run.assessments,
+    coverage: run.coverage,
+    outcome: run.outcome,
+    candidateStates: run.candidateStates,
+    explanationResults: run.explanationResults,
     evidence,
     warnings: run.warnings,
   };
   return JSON.stringify(payload, null, 2) + "\n";
 }
 
+function renderWhatWasSearched(run: ResearchRun): string {
+  if (run.schemaVersion !== 2) return "";
+  const probes = run.probesV2 ?? run.compiledProbes ?? [];
+  const rows = probes.map((probe) => {
+    const questions = probe.questionIds.map((id) => run.brief?.questions.find((question) => question.id === id)?.statement ?? id).join("; ");
+    const outcome = run.probeOutcomes?.find((item) => item.probeId === probe.id);
+    const result = outcome ? `${outcome.status}${outcome.resultClass ? ` (${outcome.resultClass})` : ""}` : "not attempted";
+    const count = outcome?.resultIds.length ?? 0;
+    const endpoint = typeof probe.providerArgs.endpoint === "string" ? probe.providerArgs.endpoint : "unknown";
+    const safe = (value: string) => value.replace(/\|/g, "\\|").replace(/\n/g, " ");
+    return `| ${safe(questions)} | \`${safe(probe.providerQuery)}\` | ${endpoint} | ${result} | ${count} |`;
+  });
+  return `## What was searched\n\n| Question | Compiled query | Endpoint | Outcome | Results |\n|---|---|---|---|---:|\n${rows.join("\n") || "| _none_ | - | - | not attempted | 0 |"}\n`;
+}
+
+function renderV2Receipt(run: ResearchRun): string {
+  if (run.schemaVersion !== 2 || !run.coverage || !run.assessments || !run.outcome) return "";
+  const coverage = run.coverage.length
+    ? run.coverage.map((question) => {
+        const supported = question.supportedClaimIds.length ? question.supportedClaimIds.join(", ") : "none";
+        const gaps = question.unsatisfiedObligations.length ? question.unsatisfiedObligations.join("; ") : "none";
+        return `- \`${question.questionId}\`: **${question.status}**; supported claims: ${supported}; open obligations: ${gaps}`;
+      }).join("\n")
+    : "- No required proof questions.";
+  const assessments = run.assessments.length
+    ? run.assessments.map((assessment) => `- \`${assessment.claimId}\` (${assessment.subject.repo}, ${assessment.method}): **${assessment.status}** — ${assessment.rationale}`).join("\n")
+    : "- No candidate claims were assessed.";
+  const rpcReceipt = run.budgetLedger
+    ? `\n\n## Budget receipt\n\n- Physical RPC calls: ${run.budgetLedger.consumed.rpcCount}; unbudgeted metadata calls: ${run.budgetLedger.consumed.unbudgetedMetadataCalls ?? 0} (${Object.entries(run.budgetLedger.consumed.metadataCallBreakdown ?? {}).map(([kind, count]) => `${kind}: ${count}`).join(", ") || "no breakdown recorded"}).`
+    : "";
+  return `## Question coverage\n\n${coverage}\n\n## Claim assessments\n\n${assessments}\n\n## Run outcome\n\n- **${run.outcome.status}**${run.outcome.reasons.length ? ` — ${run.outcome.reasons.join("; ")}` : ""}${rpcReceipt}`;
+}
+
 export interface RunStatus {
-  status: "complete" | "inconclusive";
+  status: "complete" | "partial" | "inconclusive" | "needs_input" | "failed" | "legacy_unvalidated";
   reasons: string[];
 }
 
 /**
  * Derive a run's outcome from concrete artifacts, not aspiration. A run is only
- * "complete" when it selected at least one repo AND captured proved evidence;
+ * "complete" when it selected at least one repo AND captured narrow source support;
  * otherwise it is "inconclusive" with machine-readable reasons. This is what
  * prevents a zero-evidence run from looking like successful research.
  */
 export function deriveRunStatus(run: ResearchRun, evidence: EvidenceAnchor[]): RunStatus {
+  if (run.schemaVersion === 2 && run.outcome) return { status: run.outcome.status, reasons: run.outcome.reasons };
+  if (run.evidencePolicyVersion !== EVIDENCE_POLICY_VERSION) return { status: "legacy_unvalidated", reasons: ["legacy_unvalidated"] };
   const reasons: string[] = [];
   if (run.warnings.some((w) => /\[provider_search_failed\]|Provider code search failed/i.test(w))) {
     reasons.push("provider_search_failed");
@@ -358,7 +431,7 @@ export function deriveRunStatus(run: ResearchRun, evidence: EvidenceAnchor[]): R
   const selectedEvidence = evidence.filter((anchor) => !anchor.repo || selected.has(anchor.repo));
   if (selectedEvidence.length === 0) {
     reasons.push("no_evidence_anchors");
-  } else if (selectedEvidence.every((anchor) => anchor.proofLevel !== "proved")) {
+  } else if (!selectedEvidence.some(isExactQuotationSupport)) {
     reasons.push("no_proved_evidence");
   } else if (getMissingRequiredProof(run.featureSpec, selectedEvidence).length > 0) {
     reasons.push("missing_required_proof");
@@ -372,76 +445,20 @@ function renderChecklistMd(
   pattern: ExtractedPattern,
   status: RunStatus,
 ): string {
-  return status.status === "inconclusive"
+  return status.status !== "complete"
     ? renderRecoveryChecklistMd(run, status)
     : renderDerivedChecklistMd(run, pattern);
 }
 
 /** Evidence-derived checklist for a complete (evidence-backed) run. */
-function renderDerivedChecklistMd(run: ResearchRun, pattern: ExtractedPattern): string {
-  const spec = run.featureSpec;
-  const map = pattern.implementationMap;
-  const flowSteps = [
-    ...map.serverFlow.map((s) => `Server: ${s}`),
-    ...map.clientFlow.map((s) => `Client: ${s}`),
-    ...(map.routeProtection ?? []).map((s) => `Routing: ${s}`),
-  ];
-  const tests = map.tests ?? [];
+function renderDerivedChecklistMd(run: ResearchRun, _pattern: ExtractedPattern): string {
+  return `# Implementation Checklist: ${run.featureSpec.feature}
 
-  return `# Implementation Checklist: ${spec.feature}
+> No implementation checklist is established. Phase 1 source quotations confirm only the text present at a cited path; they do not verify runtime behavior or a pattern to copy.
 
-## Dependencies
-${
-  map.dependencies.length > 0
-    ? map.dependencies.map((d) => `- [ ] Install or verify \`${d}\`.`).join("\n")
-    : "- [ ] Confirm required dependencies (none were identified from evidence)."
-}
-
-## Environment
-${
-  map.environmentVariables.length > 0
-    ? map.environmentVariables
-        .map((v) => `- [ ] Set \`${v}\` (name only; store the value in your secret store).`)
-        .join("\n")
-    : "- [ ] Confirm environment variables against the selected repos' README/env docs."
-}
-
-## Files to create or modify
-${
-  map.files.length > 0
-    ? map.files
-        .map(
-          (f) =>
-            `- [ ] \`${f.path}\` — ${f.role}${
-              f.evidence.length > 0
-                ? ` (follow the proved pattern from ${f.evidence.length} anchor${
-                    f.evidence.length === 1 ? "" : "s"
-                  })`
-                : " (no direct proof; verify against the selected repos)"
-            }.`,
-        )
-        .join("\n")
-    : "- [ ] No target files were identified from evidence."
-}
-
-## Implementation flow
-${
-  flowSteps.length > 0
-    ? flowSteps.map((s) => `- [ ] ${s}`).join("\n")
-    : "- [ ] No implementation flow was extracted; follow the selected repos' evidence anchors."
-}
-
-## Tests
-${
-  tests.length > 0
-    ? tests.map((t) => `- [ ] ${t}`).join("\n")
-    : "- [ ] Add unit tests for the new flow.\n- [ ] Add one integration / e2e path.\n- [ ] Run a manual smoke test."
-}
-
-## Verification & rollout
-- [ ] Re-check every accepted repo's evidence anchors against live source before relying on them.
-- [ ] Land the change behind small, isolated commits so a single revert removes it.
-- [ ] Update README / internal docs and resolve or explicitly accept open questions.
+## Before implementation
+- [ ] Assess the quoted source in its surrounding context.
+- [ ] Verify the relevant behavior independently before planning implementation work.
 `;
 }
 
@@ -450,7 +467,7 @@ function renderRecoveryChecklistMd(run: ResearchRun, status: RunStatus): string 
   const spec = run.featureSpec;
   return `# Research Recovery Checklist: ${spec.feature}
 
-> ⚠ Run status: **inconclusive** (${status.reasons.join(", ") || "unknown"}).
+> ⚠ Run status: **${status.status}** (${status.reasons.join(", ") || "unknown"}).
 > No implementation work should proceed from the previous run. Resolve the
 > items below, then re-run research before building anything.
 
@@ -514,13 +531,13 @@ function renderInconclusiveResearchMd(
   status: RunStatus,
 ): string {
   const spec = run.featureSpec;
-  const probeList =
+  const probeList = run.schemaVersion === 2 && run.brief ? renderWhatWasSearched(run) :
     run.probes.length > 0
       ? run.probes.map((p) => `- [${p.kind}] ${p.query} — ${p.rationale}`).join("\n")
       : "- No probes were generated.";
-  return `# Research: ${spec.feature} (INCONCLUSIVE)
+  return `# Research: ${spec.feature} (${status.status.toUpperCase()})
 
-> ⚠ **This run is INCONCLUSIVE.** No fully evidence-backed conclusion was reached.
+> ⚠ **This run is ${status.status.toUpperCase()}.** No fully evidence-backed conclusion was reached.
 > The sections below describe what was searched and why proof remained incomplete — they are
 > diagnostics, not verified findings. Do not present this as completed research.
 
@@ -530,7 +547,7 @@ ${run.goal}
 
 ## Status
 
-- **Status:** \`inconclusive\`
+- **Status:** \`${status.status}\`
 - **Reasons:** ${status.reasons.join(", ") || "unknown"}
 - Candidates evaluated: ${run.candidates.length}
 - Repositories selected: ${run.selectedRepos.length}
@@ -544,9 +561,9 @@ evidence anchor(s), but did not satisfy the complete proof contract. This is
 **not** proof that the answer is negative. Treat these artifacts as diagnostics,
 not completed findings.
 
-## What was searched
+${renderV2Receipt(run)}
 
-${probeList}
+${run.schemaVersion === 2 && run.brief ? probeList : `## What was searched\n\n${probeList}`}
 
 ## Open questions (unresolved)
 
@@ -562,7 +579,7 @@ ${run.warnings.map((w) => `- ${w}`).join("\n") || "- none"}
 
 ## Skeptic notes
 
-- An inconclusive run must never be presented as completed research.
+- A non-complete run must never be presented as completed research.
 - Re-run after fixing the highest-priority reason above before drawing any conclusion.
 `;
 }
@@ -573,8 +590,8 @@ function renderInconclusivePlanMd(
   status: RunStatus,
 ): string {
   const spec = run.featureSpec;
-  const provedCount = evidence.filter((anchor) => anchor.proofLevel === "proved").length;
-  return `# Plan: ${spec.feature} — INCONCLUSIVE (no evidence-backed plan)
+  const provedCount = evidence.filter(isExactQuotationSupport).length;
+  return `# Plan: ${spec.feature} — ${status.status.toUpperCase()} (no evidence-backed plan)
 
 > ⚠ No implementation plan is safe until the proof contract is complete. This
 > file lists recovery actions, not steps to implement. Do not build from it.
@@ -590,8 +607,9 @@ Reasons: ${status.reasons.join(", ") || "unknown"}
 ## Why there is no plan
 
 The run selected ${run.selectedRepos.length} repository/repositories and captured
-${evidence.length} evidence anchor(s) (${provedCount} proved), but the proof contract
-is still incomplete. Resolve the reasons above and re-run before implementing.
+${evidence.length} evidence anchor(s) (${provedCount} exact-quotation supports), but the proof contract
+is still incomplete. Source quotations establish only what a source states; they do not establish runtime behavior.
+No implementation steps are established. Resolve the reasons above and re-run before implementing.
 
 ## Recovery actions
 
@@ -605,7 +623,10 @@ ${run.probes.map((p) => `- [${p.kind}] ${p.query}`).join("\n") || "- none"}
 
 ${
   run.selectedRepos.length > 0
-    ? run.selectedRepos.map((repo) => `- ${repo} (partially supported; do not implement yet)`).join("\n")
+    ? run.selectedRepos.map((repo) => {
+        const url = run.candidates.find((candidate) => candidate.repo === repo)?.url;
+        return `- ${url ? `[${repo}](${url})` : repo} (partially supported; do not implement yet)`;
+      }).join("\n")
     : "- No repositories selected. Re-run after recovery; do not implement from this file."
 }
 `;

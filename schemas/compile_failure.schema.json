@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/research-orchestrator/compile_failure.schema.json",
+  "title": "CompileFailure",
+  "type": "object",
+  "required": ["questionId", "qualifier", "reason", "degraded"],
+  "properties": {
+    "questionId": { "type": "string", "minLength": 1 },
+    "qualifier": { "type": "string", "minLength": 1 },
+    "reason": { "type": "string", "minLength": 1 },
+    "degraded": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

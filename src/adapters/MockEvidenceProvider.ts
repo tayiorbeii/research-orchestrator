@@ -10,12 +10,17 @@ import type {
   RepoSearchQuery,
   RepoSearchResult,
   RepoTree,
+  ProviderSearchCapabilities,
+  IssueProposal,
+  IssueReadRequest,
+  IssueSearchQuery,
 } from "./EvidenceProvider.js";
 import type { CandidateRepo, SearchProbe } from "../schemas/index.js";
 
-interface MockFixture {
+export interface MockFixture {
   candidates: CandidateRepo[];
   fileContents: Record<string, Record<string, string>>;
+  issues?: Record<string, IssueProposal[]>;
 }
 
 /**
@@ -25,6 +30,9 @@ interface MockFixture {
  */
 export class MockEvidenceProvider implements EvidenceProvider {
   readonly name = "mock" as const;
+  searchCapabilities(): ProviderSearchCapabilities {
+    return { capabilityVersion: "mock-fixture-v1", revisionPinning: true, supportedQualifiers: { codeSearch: [], repoSearch: [] }, codeSearch: true, repoSearch: true, issues: true, batch: { codeSearch: true, repoSearch: false } };
+  }
   private fixture: MockFixture | undefined;
   private readonly fixturePath: string;
 
@@ -39,10 +47,12 @@ export class MockEvidenceProvider implements EvidenceProvider {
     if (this.fixture) return this.fixture;
     const raw = JSON.parse(await readFile(this.fixturePath, "utf8")) as {
       candidates: CandidateRepo[];
+      issues?: Record<string, IssueProposal[]>;
     };
     this.fixture = {
       candidates: raw.candidates ?? [],
       fileContents: MOCK_FILE_CONTENTS,
+      issues: raw.issues ?? {},
     };
     return this.fixture;
   }
@@ -84,6 +94,23 @@ export class MockEvidenceProvider implements EvidenceProvider {
     }));
   }
 
+  async searchIssues(input: IssueSearchQuery): Promise<IssueProposal[]> {
+    const { issues = {} } = await this.load();
+    const terms = input.query.toLowerCase().split(/\s+/).filter((term) => term.length > 2);
+    return Object.entries(issues)
+      .filter(([repo]) => !input.repo || repo === input.repo)
+      .flatMap(([, repoIssues]) => repoIssues)
+      .filter((issue) => terms.length === 0 || terms.some((term) => `${issue.title} ${issue.body}`.toLowerCase().includes(term)))
+      .slice(0, input.maxResults);
+  }
+
+  async getIssue(input: IssueReadRequest): Promise<IssueProposal> {
+    const { issues = {} } = await this.load();
+    const issue = (issues[input.repo] ?? []).find((item) => item.number === input.number);
+    if (!issue) throw new Error(`Mock issue ${input.repo}#${input.number} is unavailable.`);
+    return issue;
+  }
+
   async getRepoMetadata(repo: RepoRef): Promise<RepoMetadata> {
     const { candidates } = await this.load();
     const candidate = candidates.find((c) => c.repo === repo.repo);
@@ -101,6 +128,10 @@ export class MockEvidenceProvider implements EvidenceProvider {
       stars: candidate.stars,
       pushedAt: candidate.pushedAt,
     };
+  }
+
+  async resolveRevision(input: RepoRef) {
+    return { sha: "0123456789abcdef0123456789abcdef01234567", ref: input.ref ?? "fixture", source: "provider" as const };
   }
 
   async getFile(input: FileReadRequest): Promise<FileEvidence> {
