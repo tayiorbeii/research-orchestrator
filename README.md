@@ -128,6 +128,12 @@ run's limits (the same overrides are `budgetOverrides` on the MCP find tool).
 searches (`language:X`); dependency, config, and workflow facts are never language-filtered
 (manifests are JSON/YAML), and listing several languages applies no filter.
 
+Quotation evidence is deliberately strict: a signal that appears only on import/use/require
+lines is a partial lead, not proof of implementation, and several signals in one fact must
+appear within 12 lines of each other. For a fact with several signals, the engine also runs one
+combined search for all of them. Avoid generic signals (numbers, common words): code search
+drops punctuation, so `"continue": false` searches for "continue false".
+
 `find --goal` remains available as a compatibility adapter, with intentionally
 stricter handling of vague goals. Mock is synthetic fixture data, not live
 repository research; its mode and synthetic origin are shown in receipts.

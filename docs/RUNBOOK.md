@@ -85,7 +85,7 @@ Turns a goal into grounded planning artifacts.
 | `--out <dir>` | ✅ | — | Output directory for artifacts (created if missing). |
 | `--mode <mode>` | — | `mock` | `mock` \| `octocode` \| `github`. |
 | `--mock` | — | — | Shorthand for `--mode mock` (deterministic, no network). |
-| `--max-candidates <n>` | — | `25` | Cap how many candidate repos are collected. |
+| `--max-candidates <n>` | — | `40` live, `25` mock | Cap how many candidate repos are collected. |
 | `--max-repos-to-prove <n>` | — | unset | Cap deep proof reads (limits Octocode calls / cost). |
 | `--deadline-minutes <n>` | — | 30 live / 1 mock | Wall-clock limit for the whole run. A full multi-question live run can take tens of minutes; raise it rather than letting reads stop with `run deadline reached`. |
 | `--budget <k=n,...>` | — | live: queryUnits 32, fileReads 150, 16/repo; mock: 16/48/12 | Operator budget overrides, e.g. `fileReads=120,fileReadsPerRepo=16,queryUnits=32`. Keys: `maxQuestions queryUnits reconnaissanceReads fileReads fileReadsPerRepo refinementRounds refinementProbes deadlineMs`. A brief itself cannot raise budgets (`budget_explicitly_raised`); these flags can. |

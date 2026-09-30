@@ -2,7 +2,7 @@
 import { runPipeline } from "./core/pipeline.js";
 import { executeBrief, type ExecuteBriefDeps } from "./core/brief/executeBrief.js";
 import { draftBriefFromGoal } from "./core/brief/draftBriefFromGoal.js";
-import { describeBudgets, parseBudgetFlag, resolveRunBudgets, type BudgetOverrides } from "./core/brief/runBudgets.js";
+import { describeBudgets, LIVE_DEFAULT_MAX_CANDIDATES, parseBudgetFlag, resolveRunBudgets, type BudgetOverrides } from "./core/brief/runBudgets.js";
 import type { BudgetLimits } from "./schemas/researchBrief.js";
 import { validateBrief } from "./core/brief/validateBrief.js";
 import { reviseBrief } from "./core/brief/reviseBrief.js";
@@ -81,7 +81,7 @@ find options:
   --out <dir>                Output directory for artifacts (required)
   --mock                     Use the deterministic mock provider (no network)
   --mode <mode>              mock | octocode | github (default: mock)
-  --max-candidates <n>       Cap candidate repos (default: 25)
+  --max-candidates <n>       Cap candidate repos (default: 40 live, 25 mock)
   --max-repos-to-prove <n>   Cap deep proof reads
   --deadline-minutes <n>     Wall-clock limit for the run (live default: 30; mock: 1)
   --budget <k=n,...>         Override run budgets (live defaults: queryUnits=32 fileReads=150
@@ -231,7 +231,7 @@ async function commandFind(flags: Map<string, string | boolean>): Promise<void> 
     throw error;
   }
 
-  const maxCandidates = intFlag(flags, "max-candidates");
+  const maxCandidates = intFlag(flags, "max-candidates") ?? (mode !== "mock" ? LIVE_DEFAULT_MAX_CANDIDATES : undefined);
   const maxReposToProve = intFlag(flags, "max-repos-to-prove");
   const budgetOverrides = budgetOverridesFromFlags(flags);
   const live = mode !== "mock";

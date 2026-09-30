@@ -10,7 +10,7 @@ import { resolveOctocodeProvider } from "../../adapters/bridge.js";
 import type { EvidenceProvider } from "../../adapters/EvidenceProvider.js";
 import { FileResearchCache } from "../../cache/FileResearchCache.js";
 import type { ResearchRunV2 } from "../../schemas/researchRun.js";
-import { resolveRunBudgets } from "../../core/brief/runBudgets.js";
+import { LIVE_DEFAULT_MAX_CANDIDATES, resolveRunBudgets } from "../../core/brief/runBudgets.js";
 
 export const findImplementationsInputShape = {
   goal: z.string().min(1).optional().describe("High-level research goal; adapted to the same brief engine."),
@@ -88,7 +88,7 @@ export async function findImplementations(input: FindImplementationsInput, deps:
   if (validation.issues.length > 0) throw new ResearchError("invalid_feature_spec", `Invalid research brief: ${validation.issues.map((issue) => issue.code).join(", ")}`);
   const drafted = validation.brief;
   const brief = parsed.brief ? drafted : withLegacyTerms(drafted, [...(parsed.mustHave ?? []), ...(parsed.shouldHave ?? [])]);
-  const run = await (deps.executeBrief ?? executeBrief)({ ...brief, budgets: resolveRunBudgets(brief.budgets, { live: (parsed.mode ?? "mock") !== "mock", overrides: parsed.budgetOverrides }) }, { provider, maxCandidates: parsed.maxCandidates, maxReposToProve: parsed.maxReposToProve, deterministic: (parsed.mode ?? "mock") === "mock", resumeLedger, resumeRun, parentRunId: parsed.resumeRunId });
+  const run = await (deps.executeBrief ?? executeBrief)({ ...brief, budgets: resolveRunBudgets(brief.budgets, { live: (parsed.mode ?? "mock") !== "mock", overrides: parsed.budgetOverrides }) }, { provider, maxCandidates: parsed.maxCandidates ?? ((parsed.mode ?? "mock") !== "mock" ? LIVE_DEFAULT_MAX_CANDIDATES : undefined), maxReposToProve: parsed.maxReposToProve, deterministic: (parsed.mode ?? "mock") === "mock", resumeLedger, resumeRun, parentRunId: parsed.resumeRunId });
   const evidence = run.candidates.flatMap((candidate) => candidate.candidateSignals.flatMap((signal) => signal.evidence ?? []));
 
   // Persist the run so research.writePlanArtifact can reference it by runId.

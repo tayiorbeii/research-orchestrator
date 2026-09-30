@@ -35,3 +35,22 @@ describe("language scoping", () => {
     expect(queries.some((query) => !/language:/.test(query))).toBe(true);
   });
 });
+
+describe("combined-signal probes", () => {
+  it("adds one search for all of an obligation's quotation signals together", () => {
+    const brief = briefWith(undefined, [q("p5", [{ kind: "quotation", signals: ["updatedToolOutput", "noOutputExpected"] }])]);
+    const queries = queriesFor(brief, "p5");
+    expect(queries).toContain("updatedToolOutput noOutputExpected");
+    expect(queries.filter((query) => query === "updatedToolOutput" || query === "noOutputExpected").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does not combine a dependency with a quotation (different files)", () => {
+    const brief = briefWith(undefined, [q("q1", [{ kind: "dependency", packageName: "@convex-dev/auth" }, { kind: "quotation", signals: ["Resend"] }])]);
+    for (const query of queriesFor(brief, "q1")) expect(query).not.toMatch(/@convex-dev\/auth.*Resend|Resend.*@convex-dev\/auth/);
+  });
+
+  it("does not combine signals of an any-combine obligation", () => {
+    const brief = briefWith(undefined, [{ ...q("q1", []), obligations: [{ facts: [{ kind: "quotation", signals: ["Alpha", "Beta"] }], combine: "any", scope: "across_examples" }] }]);
+    expect(queriesFor(brief, "q1")).not.toContain("Alpha Beta");
+  });
+});

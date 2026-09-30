@@ -22,6 +22,9 @@ export const LIVE_DEFAULT_BUDGETS: Readonly<Partial<BudgetLimits>> = Object.free
   deadlineMs: LIVE_DEFAULT_DEADLINE_MS,
 });
 
+/** Live candidate cap: enough repositories to spend the live read budget. */
+export const LIVE_DEFAULT_MAX_CANDIDATES = 40;
+
 export type BudgetOverrides = Partial<BudgetLimits>;
 
 const BUDGET_KEYS = Object.keys(DEFAULT_BRIEF_BUDGETS) as Array<keyof BudgetLimits>;

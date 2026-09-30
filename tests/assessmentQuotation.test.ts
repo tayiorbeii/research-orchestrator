@@ -70,3 +70,62 @@ describe("same-subject quotation targets", () => {
     expect(assess(proposed, [repositoryFile]).status).not.toBe("supported");
   });
 });
+
+describe("import-only mentions are leads, not implementation proof", () => {
+  const assess = claimAssessorRegistry.exact_source_quotation!;
+  const implemented: ClaimSpec = { ...claim, assertion: "implemented: PostToolUseOutcome", target: { kind: "quotation", signals: ["PostToolUseOutcome"], claimScope: "implemented" } };
+  const rs = (id: string, text: string) => observation(id, text, "codex-rs/core/src/hook_runtime.rs");
+
+  it("demotes a signal that appears only on import/use lines to partial", () => {
+    for (const text of ["use codex_hooks::PostToolUseOutcome;", "import { PostToolUseOutcome } from './hooks';", "from hooks import PostToolUseOutcome", "const { PostToolUseOutcome } = require('./hooks');", "export { PostToolUseOutcome } from './hooks';"]) {
+      const result = assess(implemented, [rs("imp", text)]);
+      expect(result.status, text).toBe("partial");
+      expect(result.rationale).toMatch(/only on import/i);
+    }
+  });
+
+  it("supports a signal used outside import lines", () => {
+    const text = "use codex_hooks::PostToolUseOutcome;\nlet outcome: PostToolUseOutcome = run_hooks(&input);";
+    const multi = { ...rs("body", text), endLine: 2, anchor: { ...rs("body", text).anchor!, endLine: 2 } };
+    const result = assess(implemented, [multi]);
+    expect(result.status).toBe("supported");
+  });
+
+  it("leaves documentation/advertised quotations unaffected", () => {
+    const advertised: ClaimSpec = { ...claim, assertion: "advertised", target: { kind: "quotation", path: "README.md", signals: ["import"], claimScope: "advertised" } };
+    expect(assess(advertised, [observation("doc", "import is documented here", "README.md")]).status).toBe("supported");
+  });
+});
+
+describe("import blocks and signal proximity", () => {
+  const assess = claimAssessorRegistry.exact_source_quotation!;
+  const bounded = (id: string, text: string, path = "src/hooks/index.ts") => {
+    const lines = text.split("\n").length;
+    const o = observation(id, text, path);
+    return { ...o, endLine: lines, anchor: { ...o.anchor!, endLine: lines } };
+  };
+  const implemented = (signals: string[]): ClaimSpec => ({ ...claim, assertion: `implemented: ${signals.join(", ")}`, target: { kind: "quotation", signals, claimScope: "implemented" } });
+
+  it("treats names inside a multi-line import block as import-only", () => {
+    const text = "import {\n  type PostToolUseOutcome,\n  runHooks,\n} from './engine';\nexport const x = 1;";
+    expect(assess(implemented(["PostToolUseOutcome"]), [bounded("blk", text)]).status).toBe("partial");
+  });
+
+  it("does not mistake destructuring exports for an import block", () => {
+    const text = "import { convexAuth } from '@convex-dev/auth/server';\nexport const { auth, signIn } = convexAuth({\n  providers: [],\n});";
+    expect(assess(implemented(["convexAuth"]), [bounded("destructure", text, "convex/auth.ts")]).status).toBe("supported");
+  });
+
+  it("treats Rust use blocks as imports", () => {
+    const text = "use crate::events::{\n    PostToolUseOutcome,\n    PreToolUseOutcome,\n};\nfn main() {}";
+    expect(assess(implemented(["PostToolUseOutcome"]), [bounded("rs", text, "src/lib.rs")]).status).toBe("partial");
+  });
+
+  it("requires several signals to co-occur within a small window", () => {
+    const far = ["Each string is capped at 10,000 characters.", ...Array.from({ length: 19 }, () => "filler"), "`updatedToolOutput` hooks"].join("\n");
+    const near = "updatedToolOutput replaces the output; it is capped at 10,000 characters.";
+    const advertised: ClaimSpec = { ...claim, assertion: "advertised", target: { kind: "quotation", path: "docs/HOOKS.md", signals: ["updatedToolOutput", "10,000"], claimScope: "advertised" } };
+    expect(assess(advertised, [bounded("far", far, "docs/HOOKS.md")]).status).toBe("unsupported");
+    expect(assess(advertised, [bounded("near", near, "docs/HOOKS.md")]).status).toBe("supported");
+  });
+});

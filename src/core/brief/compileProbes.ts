@@ -59,6 +59,25 @@ export function compileProbes(
     }
   }
 
+  // A same-repository "all" obligation with several quotation signals needs a
+  // file that states them together. Separate per-term searches return
+  // different ~35-lead lists that rarely share a repository, so one combined
+  // search for all the signals is the most precise probe and goes first.
+  for (const candidate of combinedSignalCandidates(brief)) {
+    const key = `${candidate.question.id}|combined:${(candidate.queryTermIds ?? []).join("+")}`;
+    if (scheduled.has(key)) continue;
+    scheduled.add(key);
+    if (available <= 0) break;
+    const outcome = compileOne(candidate, brief, capabilities, options.allowDegraded === true, probes.length);
+    if (outcome.failure) failures.push(outcome.failure);
+    if (outcome.probe) {
+      outcome.probe.rationale = `Search for all of question ${candidate.question.id}'s quotation signals together (${candidate.queryText}).`;
+      probes.push(outcome.probe);
+      available -= 1;
+      updatedLedger.reserved = { queryUnits: (updatedLedger.reserved?.queryUnits ?? 0) + 1 };
+    }
+  }
+
   for (const candidate of candidates) {
     const key = `${candidate.question.id}|${candidate.term.id}|${candidate.issueSearch ? "issue" : "source"}`;
     if (scheduled.has(key)) continue;
@@ -115,6 +134,23 @@ function languageQualifier(question: ResearchBrief["questions"][number], brief: 
   const facts = question.obligations.flatMap((obligation) => obligation.facts);
   if (facts.length === 0 || facts.some((fact) => fact.kind !== "quotation")) return undefined;
   return `language:${brief.languages[0]}`;
+}
+
+/** One candidate per combine-"all" obligation that names 2+ quotation signals. */
+function combinedSignalCandidates(brief: ResearchBrief): Candidate[] {
+  if (brief.questions.length === 0) return [];
+  return brief.questions.flatMap((question) => {
+    if (isProposedQuestion(question)) return [];
+    return question.obligations.flatMap((obligation) => {
+      if (obligation.combine !== "all") return [];
+      const signals = [...new Set(obligation.facts.flatMap((fact) => fact.kind === "quotation" ? fact.signals : []))];
+      const terms = signals.map((signal) => brief.vocabulary.find((term) => term.questionIds.includes(question.id) && term.text === signal &&
+        !(term.egress === "restricted" && !brief.egressPolicy?.allowRestrictedLocalTerms))).filter((term): term is VocabularyTerm => Boolean(term));
+      if (terms.length < 2) return [];
+      const base = candidateFor(question, terms[0]!, brief);
+      return [{ ...base, queryText: dedupeProbeTokens(terms.map((term) => term.text).join(" ")), queryTermIds: terms.map((term) => term.id) }];
+    });
+  });
 }
 
 function obligationPathQualifier(question: ResearchBrief["questions"][number]): string | undefined {
