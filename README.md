@@ -118,6 +118,12 @@ npm run cli -- find --brief brief.json --out .research/run --mode mock
 npm run cli -- find --resume RUN_ID --brief revised-brief.json --out .research/resume --mode mock
 ```
 
+Write questions with obligation facts: a `dependency` fact (`packageName`), `quotation` signals
+(exact symbols), `config` keys, or `workflow` commands. Those facts become the search terms, and
+a dependency fact also schedules the repository's `package.json` for proof. Live runs default to a
+30-minute deadline; pass `--deadline-minutes <n>` or `--budget fileReads=120,...` to change the
+run's limits (the same overrides are `budgetOverrides` on the MCP find tool).
+
 `find --goal` remains available as a compatibility adapter, with intentionally
 stricter handling of vague goals. Mock is synthetic fixture data, not live
 repository research; its mode and synthetic origin are shown in receipts.

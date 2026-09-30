@@ -204,10 +204,27 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
     if (!paths.has(seed.repo)) paths.set(seed.repo, new Set(expectedPaths(brief)));
   }
   const probeQuestions = new Map([...historyProbes, ...scheduled].map((probe) => [probe.id, probe.questionIds]));
-  const repoNames = [...associations.keys()].sort((left, right) => {
-    const score = (repo: string) => [...(associations.get(repo) ?? [])].flatMap((probeId) => probeQuestions.get(probeId) ?? []).reduce((sum, questionId) => sum + (leadCoverage.get(questionId) ?? 0), 0);
-    return score(left) - score(right);
-  }).slice(0, deps.maxCandidates ?? 25);
+  // A code-search hit shows where a term is mentioned, not where a fact is
+  // declared: a search for a package name lands on docs and scripts, never on
+  // the manifest that proves the dependency. Add each matched question's
+  // declaration files (dependency manifests, explicitly named config/workflow
+  // files) to the repository's read set.
+  const declarationFiles = new Map(brief.questions.map((question) => [question.id, declarationPaths(question)]));
+  for (const [repo, probeIds] of associations) {
+    const repoPaths = paths.get(repo) ?? (paths.set(repo, new Set()), paths.get(repo)!);
+    for (const questionId of new Set([...probeIds].flatMap((probeId) => probeQuestions.get(probeId) ?? []))) {
+      for (const path of declarationFiles.get(questionId) ?? []) repoPaths.add(path);
+    }
+  }
+  const repoNames = selectCandidateRepos({
+    associations,
+    probeQuestions,
+    // Weakest-covered question first, so its scarce leads are read first.
+    questionOrder: brief.questions.map((question, index) => ({ id: question.id, index, leads: leadCoverage.get(question.id) ?? 0 }))
+      .sort((left, right) => left.leads - right.leads || left.index - right.index).map((entry) => entry.id),
+    seeds: brief.seeds.map((seed) => seed.repo),
+    limit: deps.maxCandidates ?? 25,
+  });
   const candidates: CandidateRepo[] = [];
   for (const repo of repoNames) {
     if (now().getTime() >= Date.parse(ledger.deadlineAt ?? createdAt)) {
@@ -332,6 +349,59 @@ function assessBrief(brief: ResearchBrief, candidates: CandidateRepo[], observat
   return assessments;
 }
 
+
+/**
+ * Choose which discovered repositories become candidates. Seeds come first,
+ * then repositories that matched the most distinct questions, then a
+ * round-robin across questions in `questionOrder` (the caller passes the
+ * weakest-covered question first), each in search-result order.
+ * Without the round-robin, one broad search (a popular package name) filled
+ * every candidate slot and the other questions' leads were never read.
+ */
+export function selectCandidateRepos(input: {
+  associations: ReadonlyMap<string, ReadonlySet<string>>;
+  probeQuestions: ReadonlyMap<string, readonly string[]>;
+  questionOrder: readonly string[];
+  seeds: readonly string[];
+  limit: number;
+}): string[] {
+  const questionsOf = (repo: string) => new Set([...(input.associations.get(repo) ?? [])].flatMap((probeId) => input.probeQuestions.get(probeId) ?? []));
+  const discovered = [...input.associations.keys()];
+  const chosen: string[] = [];
+  const take = (repo: string) => {
+    if (chosen.length < input.limit && !chosen.includes(repo)) chosen.push(repo);
+  };
+  for (const seed of input.seeds) if (input.associations.has(seed)) take(seed);
+  const multi = discovered
+    .map((repo, index) => ({ repo, index, breadth: questionsOf(repo).size }))
+    .filter((entry) => entry.breadth > 1)
+    .sort((left, right) => right.breadth - left.breadth || left.index - right.index);
+  for (const { repo } of multi) take(repo);
+  const knownQuestions = [...input.questionOrder, ...new Set(discovered.flatMap((repo) => [...questionsOf(repo)]))].filter((id, index, all) => all.indexOf(id) === index);
+  const queues = knownQuestions.map((questionId) => discovered.filter((repo) => questionsOf(repo).has(questionId)));
+  const unlinked = discovered.filter((repo) => questionsOf(repo).size === 0);
+  let progressed = true;
+  while (chosen.length < input.limit && progressed) {
+    progressed = false;
+    for (const queue of queues) {
+      while (queue.length && chosen.includes(queue[0]!)) queue.shift();
+      const next = queue.shift();
+      if (next) { take(next); progressed = true; }
+    }
+  }
+  for (const repo of unlinked) take(repo);
+  return chosen;
+}
+
+/** Files that declare a question's dependency/config/workflow facts. */
+function declarationPaths(question: ResearchBrief["questions"][number]): string[] {
+  const paths = question.obligations.flatMap((obligation) => obligation.facts.flatMap((fact) => {
+    if (fact.kind === "dependency") return [fact.file ?? "package.json"];
+    if ((fact.kind === "config" || fact.kind === "workflow") && fact.file) return [fact.file];
+    return [];
+  }));
+  return [...new Set(paths)];
+}
 
 function expectedPaths(brief: ResearchBrief): string[] {
   const paths = brief.questions.flatMap((question) => question.obligations.flatMap((obligation) => obligation.facts.map((fact) => {

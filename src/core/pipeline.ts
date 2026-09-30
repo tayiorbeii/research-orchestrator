@@ -40,10 +40,11 @@ export interface RunResearchResult {
 }
 
 /** The shared legacy goal adapter used by CLI and MCP goal inputs. */
-export async function runPipeline(options: Omit<RunResearchOptions, "hints"> & { hints?: Partial<ResearchBrief> }): Promise<ResearchRunV2> {
+export async function runPipeline(options: Omit<RunResearchOptions, "hints"> & { hints?: Partial<ResearchBrief>; resolveBudgets?: (brief: ResearchBrief) => ResearchBrief }): Promise<ResearchRunV2> {
   const draft = draftBriefFromGoal(options.goal, options.hints);
   const validated = validateBrief(draft);
-  return executeBrief(validated.brief, { provider: options.provider, now: options.now, deterministic: options.deterministic, maxCandidates: options.maxCandidates, maxReposToProve: options.maxReposToProve });
+  const brief = options.resolveBudgets ? options.resolveBudgets(validated.brief) : validated.brief;
+  return executeBrief(brief, { provider: options.provider, now: options.now, deterministic: options.deterministic, maxCandidates: options.maxCandidates, maxReposToProve: options.maxReposToProve });
 }
 
 const DETERMINISTIC_CREATED_AT = "2026-06-30T00:00:00.000Z";

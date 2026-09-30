@@ -205,3 +205,24 @@ async function runCliFromBrief(brief: string, out: string, cwd: string): Promise
     child.on("close", (code) => resolve({ code, stdout, stderr }));
   });
 }
+
+describe("CLI run budgets", () => {
+  it("reports and applies --deadline-minutes and --budget overrides", async () => {
+    const result = await runCli("Next.js + Convex app with email magic links via Resend", ["--deadline-minutes", "45", "--budget", "fileReads=96", "--allow-inconclusive"]);
+    expect(result.stderr).toMatch(/budgets: deadline 45m, queryUnits 16, fileReads 96/);
+  });
+
+  it("rejects malformed budget flags", async () => {
+    const bad = await runCli("Next.js + Convex app with email magic links via Resend", ["--budget", "fileReadz=5"]);
+    expect(bad.code).toBe(1);
+    expect(bad.stderr).toMatch(/invalid --budget entry/);
+    const badMinutes = await runCli("Next.js + Convex app with email magic links via Resend", ["--deadline-minutes", "soon"]);
+    expect(badMinutes.code).toBe(1);
+    expect(badMinutes.stderr).toMatch(/--deadline-minutes must be a positive number/);
+  });
+
+  it("keeps mock runs at the one-minute brief default", async () => {
+    const result = await runCli("Next.js + Convex app with email magic links via Resend", ["--allow-inconclusive"]);
+    expect(result.stderr).toMatch(/budgets: deadline 1m,/);
+  });
+});

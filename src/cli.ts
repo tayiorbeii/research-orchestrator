@@ -2,6 +2,8 @@
 import { runPipeline } from "./core/pipeline.js";
 import { executeBrief, type ExecuteBriefDeps } from "./core/brief/executeBrief.js";
 import { draftBriefFromGoal } from "./core/brief/draftBriefFromGoal.js";
+import { describeBudgets, parseBudgetFlag, resolveRunBudgets, type BudgetOverrides } from "./core/brief/runBudgets.js";
+import type { BudgetLimits } from "./schemas/researchBrief.js";
 import { validateBrief } from "./core/brief/validateBrief.js";
 import { reviseBrief } from "./core/brief/reviseBrief.js";
 import { addLocalArtifactFingerprints } from "./core/brief/localArtifacts.js";
@@ -81,6 +83,10 @@ find options:
   --mode <mode>              mock | octocode | github (default: mock)
   --max-candidates <n>       Cap candidate repos (default: 25)
   --max-repos-to-prove <n>   Cap deep proof reads
+  --deadline-minutes <n>     Wall-clock limit for the run (live default: 30; mock: 1)
+  --budget <k=n,...>         Raise/lower other run budgets, e.g. fileReads=96,queryUnits=32
+                             (keys: maxQuestions queryUnits reconnaissanceReads fileReads
+                             fileReadsPerRepo refinementRounds refinementProbes deadlineMs)
   --no-cache                 Skip writing to .research-cache/
   --allow-inconclusive       Exit 0 for any non-complete outcome (default: exit 2)
 
@@ -226,6 +232,13 @@ async function commandFind(flags: Map<string, string | boolean>): Promise<void> 
 
   const maxCandidates = intFlag(flags, "max-candidates");
   const maxReposToProve = intFlag(flags, "max-repos-to-prove");
+  const budgetOverrides = budgetOverridesFromFlags(flags);
+  const live = mode !== "mock";
+  const withRunBudgets = <T extends { budgets: BudgetLimits }>(brief: T): T => {
+    const budgets = resolveRunBudgets(brief.budgets, { live, overrides: budgetOverrides });
+    process.stderr.write(`[research-orchestrator] budgets: ${describeBudgets(budgets)}\n`);
+    return { ...brief, budgets };
+  };
 
   try {
     let run: ResearchRunV2;
@@ -259,11 +272,11 @@ async function commandFind(flags: Map<string, string | boolean>): Promise<void> 
           process.exit(1);
         }
       }
-      run = await runBriefInput(validated.brief, { provider, deterministic: mode === "mock", maxCandidates, maxReposToProve, resumeLedger, resumeRun, parentRunId });
+      run = await runBriefInput(withRunBudgets(validated.brief), { provider, deterministic: mode === "mock", maxCandidates, maxReposToProve, resumeLedger, resumeRun, parentRunId });
       evidence = run.candidates.flatMap((candidate) => candidate.candidateSignals.flatMap((signal) => signal.evidence ?? []));
       pattern = undefined;
     } else {
-      const legacy = await runPipeline({ goal: String(goal), provider, maxCandidates, maxReposToProve, deterministic: mode === "mock" });
+      const legacy = await runPipeline({ goal: String(goal), provider, maxCandidates, maxReposToProve, deterministic: mode === "mock", resolveBudgets: withRunBudgets });
       run = legacy;
       evidence = [];
       pattern = undefined;
@@ -286,6 +299,9 @@ async function commandFind(flags: Map<string, string | boolean>): Promise<void> 
       `  candidates: ${run.candidates.length}  selected: ${run.selectedRepos.length}  anchors: ${evidence.length}\n`,
     );
     for (const warning of run.warnings) process.stdout.write(`  warning: ${warning}\n`);
+    if (run.budgetLedger?.cancelled) {
+      process.stdout.write(`  warning: run deadline (${describeBudgets(run.budgetLedger.limits).split(",")[0]}) reached before research finished; raise it with --deadline-minutes <n>, or continue with --resume ${run.id} --brief <brief.json>\n`);
+    }
     process.stdout.write("Artifacts:\n");
     for (const artifact of artifacts) process.stdout.write(`  ${artifact.path}\n`);
     if (status.status !== "complete" && flags.get("allow-inconclusive") !== true) {
@@ -380,6 +396,23 @@ async function resolveCliProvider(mode: string): Promise<EvidenceProvider> {
     default:
       fail(`unknown --mode '${mode}' (expected mock | octocode | github)`);
   }
+}
+
+/** Operator budget overrides: --deadline-minutes <n> and --budget key=n[,key=n]. */
+function budgetOverridesFromFlags(flags: Map<string, string | boolean>): BudgetOverrides {
+  let overrides: BudgetOverrides = {};
+  const budget = flags.get("budget");
+  if (budget === true) fail("--budget requires key=integer[,key=integer]");
+  if (typeof budget === "string") {
+    try { overrides = parseBudgetFlag(budget); } catch (error) { fail((error as Error).message); }
+  }
+  const minutes = flags.get("deadline-minutes");
+  if (minutes !== undefined) {
+    const parsed = typeof minutes === "string" ? Number(minutes) : Number.NaN;
+    if (!Number.isFinite(parsed) || parsed <= 0) fail("--deadline-minutes must be a positive number");
+    overrides.deadlineMs = Math.round(parsed * 60_000);
+  }
+  return overrides;
 }
 
 function intFlag(flags: Map<string, string | boolean>, key: string): number | undefined {

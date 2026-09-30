@@ -244,7 +244,8 @@ describe("executeBrief", () => {
     const run = await executeBrief(baseBrief, { provider: new MockEvidenceProvider(), deterministic: true, validateBrief: fakeValidation, compileProbes: fakeCompile, resumeLedger, parentRunId: "parent-run" });
     const original = await executeBrief(baseBrief, { provider: new MockEvidenceProvider(), deterministic: true, validateBrief: fakeValidation, compileProbes: fakeCompile });
     expect(run.id).not.toBe(original.id);
-    expect(run.budgetLedger?.consumed).toMatchObject({ queryUnits: 4, rpcCount: 10, fileReads: 6 });
+    // Includes the declaration manifest read for the dependency-fact question.
+    expect(run.budgetLedger?.consumed).toMatchObject({ queryUnits: 4, rpcCount: 11, fileReads: 7 });
     expect((run as typeof run & { parentRunId?: string }).parentRunId).toBe("parent-run");
     const root = await mkdtemp(join(tmpdir(), "brief-resume-cache-"));
     try {

@@ -80,7 +80,10 @@ export const BudgetLimitsSchema = z.object({
 }).strict();
 export type BudgetLimits = z.infer<typeof BudgetLimitsSchema>;
 
-/** Mirrors the Octocode bridge's current 60-second per-call timeout. */
+/** Default brief deadline: suits deterministic mock runs. Live runs get
+ * LIVE_DEFAULT_DEADLINE_MS (core/brief/runBudgets.ts) unless the brief or the
+ * operator sets another; this is a whole-run limit, not the per-call
+ * RESEARCH_OCTOCODE_TIMEOUT_MS. */
 export const DEFAULT_BRIEF_DEADLINE_MS = 60_000;
 
 export const DEFAULT_BRIEF_BUDGETS: Readonly<BudgetLimits> = Object.freeze({

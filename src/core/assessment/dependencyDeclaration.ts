@@ -47,7 +47,19 @@ export const dependencyDeclarationAssessor: ClaimAssessor = (claim, observations
   if (matching.length === 0) return assessment(claim, "not_assessed", [], "No same-repository, matching-revision observation was available for the asserted file.", ["An exact resolved revision is required when the claim names one."], ["Read the asserted file at the claim's repository revision."]);
   if (!matching.some(isAssessableObservation)) return assessment(claim, "not_assessed", matching.map((item) => item.id), "Non-engine observations cannot produce engine-supported assessments.", ["Only engine or synthetic declaration observations are assessed."], ["Read the declaration from an engine-origin source observation."]);
 
-  for (const observation of matching.filter(isAssessableObservation)) {
+  // Without an asserted file, only a declaration manifest can prove the
+  // claim. Examine manifests first and keep looking until one establishes the
+  // declaration: returning on the first observation let a docs page that
+  // merely mentions the package mask the package.json read after it.
+  const isManifest = (item: SourceObservation) => Boolean(item.path?.endsWith("package.json") || item.path?.endsWith("requirements.txt"));
+  const assessable = matching.filter(isAssessableObservation);
+  const ordered = assertedPath === undefined ? [...assessable.filter(isManifest), ...assessable.filter((item) => !isManifest(item))] : assessable;
+  let fallback: ClaimAssessment | undefined;
+  const keep = (candidate: ClaimAssessment) => {
+    const rank = (item: ClaimAssessment) => (item.status === "unsupported" ? 2 : item.status === "partial" ? 1 : 0);
+    if (!fallback || rank(candidate) > rank(fallback)) fallback = candidate;
+  };
+  for (const observation of ordered) {
     const excerpt = observation.excerpt!;
     const limitations: string[] = [];
     let found = false;
@@ -112,9 +124,11 @@ export const dependencyDeclarationAssessor: ClaimAssessor = (claim, observations
     if (parseable && observation.readStatus === "complete") {
       const incompleteRequirementsCoverage = limitations.some((item) => item.includes("ignored include") || item.includes("outside the supported"));
       const status = !incompleteRequirementsCoverage ? "unsupported" : "partial";
-      return assessment(claim, status, [observation.id], "The observed declaration file did not establish the asserted package and constraint; unsupported does not mean false.", [...limitations, "Declarations do not establish whether a package is invoked or enforced."], ["Inspect a complete same-revision declaration source or narrow the assertion."], observation.origin);
+      keep(assessment(claim, status, [observation.id], "The observed declaration file did not establish the asserted package and constraint; unsupported does not mean false.", [...limitations, "Declarations do not establish whether a package is invoked or enforced."], ["Inspect a complete same-revision declaration source or narrow the assertion."], observation.origin));
+      continue;
     }
-    return assessment(claim, "partial", [observation.id], "The available excerpt or format does not establish the asserted declaration.", limitations.length ? limitations : ["The source could not be parsed safely."], ["Provide a complete supported-format declaration excerpt."], observation.origin);
+    keep(assessment(claim, "partial", [observation.id], "The available excerpt or format does not establish the asserted declaration.", limitations.length ? limitations : ["The source could not be parsed safely."], ["Provide a complete supported-format declaration excerpt."], observation.origin));
   }
+  if (fallback) return fallback;
   return assessment(claim, "unsupported", matching.map((item) => item.id), "No matching declaration was found in the supplied same-subject observation.", ["Unsupported means the evidence does not establish the claim, not that it is false.", "Dependency presence never establishes invocation or enforcement."], ["Inspect the relevant declaration section and source context."]);
 };

@@ -33,12 +33,20 @@ export function draftBriefFromGoal(goal: string, hints?: Partial<ResearchBrief>)
   const existing = new Set(vocabulary.map((term) => `${term.text.toLowerCase()}|${term.questionIds.join(",")}`));
   for (let index = 0; index < sourceQuestions.length; index += 1) {
     const question = sourceQuestions[index]!;
-    const group = groups[index] ?? uniqueTerms;
-    for (const text of group) {
+    // Explicit questions are searched by what they must prove: the packages,
+    // symbols, config keys, and commands named in their obligation facts.
+    // Goal words are only a fallback for a question that names none; mapping
+    // goal-derived groups onto explicit questions by position searched for
+    // generic words ("sign-in") instead of the facts the caller supplied.
+    const factTerms = hints?.questions?.length ? termsFromFacts(question) : [];
+    const group: Array<[string, VocabularyTerm["kind"]]> = factTerms.length
+      ? factTerms
+      : (groups[index] ?? uniqueTerms).map((text) => [text, inferKind(text)]);
+    for (const [text, kind] of group) {
       const key = `${text.toLowerCase()}|${question.id}`;
       if (existing.has(key)) continue;
       existing.add(key);
-      vocabulary.push({ id: `v-${slug(text)}-${slug(question.id)}`, text, questionIds: [question.id], kind: inferKind(text), origin: "user_supplied", status: "proposed" });
+      vocabulary.push({ id: `v-${slug(text)}-${slug(question.id)}`, text, questionIds: [question.id], kind, origin: "user_supplied", status: "proposed" });
     }
   }
 
@@ -87,6 +95,21 @@ function splitSubtopics(goal: string): string[] {
   const chunks = tail.split(/,|;|\band\b/i).map((part) => part.replace(/\b(and|or)\s*$/i, "").trim()).filter(Boolean);
   // Split only an obvious list, not every ordinary compound sentence.
   return chunks.length > 1 ? chunks : [goal];
+}
+
+/** Search terms named by a question's obligation facts, with their kind. */
+function termsFromFacts(question: ResearchBrief["questions"][number]): Array<[string, VocabularyTerm["kind"]]> {
+  const terms: Array<[string, VocabularyTerm["kind"]]> = [];
+  for (const obligation of question.obligations ?? []) {
+    for (const fact of obligation.facts) {
+      if (fact.kind === "dependency") terms.push([fact.packageName, "package"]);
+      else if (fact.kind === "config") terms.push([fact.keyPath, "config_key"]);
+      else if (fact.kind === "workflow") terms.push([fact.command, "cli_token"]);
+      else if (fact.kind === "quotation") for (const signal of fact.signals) terms.push([signal, inferKind(signal)]);
+    }
+  }
+  const seen = new Set<string>();
+  return terms.filter(([text]) => { const key = text.trim().toLowerCase(); if (!key || seen.has(key)) return false; seen.add(key); return true; });
 }
 
 function inferKind(term: string): VocabularyTerm["kind"] {

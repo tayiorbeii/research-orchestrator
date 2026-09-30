@@ -99,3 +99,32 @@ describe("dependency declaration assessor", () => {
     expect(result.rationale).toMatch(/non-engine observations/i);
   });
 });
+
+describe("dependency declaration without an asserted file", () => {
+  const target = { kind: "dependency" as const, packageName: "zod" };
+  const unfiled = { ...claim, assertion: renderTargetAssertion(target), target };
+  const docs = observation({ id: "o-docs", path: "docs/setup.md", excerpt: "Install zod to validate input." });
+
+  it("is not masked by a docs mention that precedes the manifest", () => {
+    const result = dependencyDeclarationAssessor(unfiled, [docs, observation({ id: "o-pkg" })]);
+    expect(result.status).toBe("supported");
+    expect(result.requiredObservationIds).toEqual(["o-pkg"]);
+  });
+
+  it("keeps looking across manifests until one declares the package", () => {
+    const root = observation({ id: "o-root", path: "package.json", excerpt: JSON.stringify({ dependencies: { react: "^19.0.0" } }) });
+    const app = observation({ id: "o-app", path: "apps/web/package.json", excerpt: JSON.stringify({ dependencies: { zod: "^3.25.0" } }) });
+    expect(dependencyDeclarationAssessor(unfiled, [root, app]).status).toBe("supported");
+  });
+
+  it("reports unsupported, not partial, when every parsed manifest lacks the package", () => {
+    const root = observation({ id: "o-root", path: "package.json", excerpt: JSON.stringify({ dependencies: { react: "^19.0.0" } }) });
+    const result = dependencyDeclarationAssessor(unfiled, [docs, root]);
+    expect(result.status).toBe("unsupported");
+    expect(result.requiredObservationIds).toEqual(["o-root"]);
+  });
+
+  it("stays partial when only non-manifest sources were read", () => {
+    expect(dependencyDeclarationAssessor(unfiled, [docs]).status).toBe("partial");
+  });
+});
