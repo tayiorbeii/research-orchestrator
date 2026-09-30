@@ -124,6 +124,10 @@ a dependency fact also schedules the repository's `package.json` for proof. Live
 30-minute deadline; pass `--deadline-minutes <n>` or `--budget fileReads=120,...` to change the
 run's limits (the same overrides are `budgetOverrides` on the MCP find tool).
 
+`languages` is a narrow filter: with exactly one language it scopes source-code quotation
+searches (`language:X`); dependency, config, and workflow facts are never language-filtered
+(manifests are JSON/YAML), and listing several languages applies no filter.
+
 `find --goal` remains available as a compatibility adapter, with intentionally
 stricter handling of vague goals. Mock is synthetic fixture data, not live
 repository research; its mode and synthetic origin are shown in receipts.

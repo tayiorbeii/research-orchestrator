@@ -78,7 +78,7 @@ export function compileProbes(
 
   // Retain one explicitly broader alternative when the bounded query budget
   // leaves room after the path-scoped probes.
-  const broadCandidate = required.find((candidate) => candidate.qualifier && candidate.qualifierName && candidate.qualifierName !== "language" &&
+  const broadCandidate = required.find((candidate) => candidate.qualifier && candidate.qualifierName &&
     capabilities.supportedQualifiers.codeSearch.includes(candidate.qualifierName) &&
     probes.some((probe) => probe.questionIds.includes(candidate.question.id) && probe.providerQuery.includes(candidate.qualifier!)));
   if (broadCandidate && available > 0) {
@@ -97,10 +97,24 @@ export function compileProbes(
 
 function candidateFor(question: ResearchBrief["questions"][number], term: VocabularyTerm, brief: ResearchBrief): Candidate {
   const qualifier = obligationPathQualifier(question) ?? term.proposedQualifiers?.[0];
-  const language = !qualifier && brief.languages?.[0] ? `language:${brief.languages[0]}` : undefined;
+  const language = !qualifier ? languageQualifier(question, brief) : undefined;
   const value = qualifier ?? language;
   const parsed = value?.match(/^([a-z]+):(.*)$/i);
   return { question, term, qualifier: value, qualifierName: parsed?.[1]?.toLowerCase() as SearchQualifier | undefined };
+}
+
+/**
+ * A `language:` filter for a question, or none. Only source-code quotations
+ * are language-scoped: dependency manifests, config files, and workflows are
+ * JSON/YAML/TOML, so a language filter hides exactly the files that prove
+ * them. Code search cannot OR language qualifiers, so several listed
+ * languages stay a hint instead of silently narrowing to the first one.
+ */
+function languageQualifier(question: ResearchBrief["questions"][number], brief: ResearchBrief): string | undefined {
+  if (brief.languages?.length !== 1) return undefined;
+  const facts = question.obligations.flatMap((obligation) => obligation.facts);
+  if (facts.length === 0 || facts.some((fact) => fact.kind !== "quotation")) return undefined;
+  return `language:${brief.languages[0]}`;
 }
 
 function obligationPathQualifier(question: ResearchBrief["questions"][number]): string | undefined {
@@ -128,7 +142,7 @@ function initialCandidate(candidate: Candidate, brief: ResearchBrief): Candidate
   const anchors = brief.vocabulary.filter((term) => term.questionIds.includes(candidate.question.id) && term.relation !== "predecessor-of" &&
     !(term.egress === "restricted" && !brief.egressPolicy?.allowRestrictedLocalTerms)).slice(0, 3);
   const qualifierTerm = anchors.find((term) => term.proposedQualifiers?.length) ?? anchors[0];
-  const qualifier = obligationPathQualifier(candidate.question) ?? qualifierTerm?.proposedQualifiers?.[0] ?? (brief.languages?.[0] ? `language:${brief.languages[0]}` : undefined);
+  const qualifier = obligationPathQualifier(candidate.question) ?? qualifierTerm?.proposedQualifiers?.[0] ?? languageQualifier(candidate.question, brief);
   const qualifierName = qualifier?.match(/^([a-z]+):/i)?.[1]?.toLowerCase() as SearchQualifier | undefined;
   return {
     ...candidate,
