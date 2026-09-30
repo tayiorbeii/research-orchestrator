@@ -4,23 +4,40 @@
 // also get a wall-clock deadline sized for real GitHub research: a full run
 // with many questions and proof reads can take tens of minutes, while the
 // 60-second brief default only suits deterministic mock runs.
-import { DEFAULT_BRIEF_BUDGETS, DEFAULT_BRIEF_DEADLINE_MS, type BudgetLimits } from "../../schemas/researchBrief.js";
+import { DEFAULT_BRIEF_BUDGETS, type BudgetLimits } from "../../schemas/researchBrief.js";
 
 /** Default wall-clock deadline for live (octocode/github) runs: 30 minutes. */
 export const LIVE_DEFAULT_DEADLINE_MS = 30 * 60_000;
+
+/**
+ * Live-run defaults, sized for a multi-question brief (up to six questions)
+ * against real GitHub: the brief defaults (16 searches, 48 reads) left most
+ * questions of a six-question brief unread. Mock runs keep the brief
+ * defaults so fixtures and the offline eval stay deterministic.
+ */
+export const LIVE_DEFAULT_BUDGETS: Readonly<Partial<BudgetLimits>> = Object.freeze({
+  queryUnits: 32,
+  fileReads: 150,
+  fileReadsPerRepo: 16,
+  deadlineMs: LIVE_DEFAULT_DEADLINE_MS,
+});
 
 export type BudgetOverrides = Partial<BudgetLimits>;
 
 const BUDGET_KEYS = Object.keys(DEFAULT_BRIEF_BUDGETS) as Array<keyof BudgetLimits>;
 
 /**
- * Effective limits for one run. A live run whose brief still carries the
- * default deadline gets LIVE_DEFAULT_DEADLINE_MS; a brief that chose a
- * different (lower) deadline keeps it. Explicit overrides win over both.
+ * Effective limits for one run. A live run raises every budget that still
+ * carries its brief default to LIVE_DEFAULT_BUDGETS; a brief that chose a
+ * different (lower) value keeps it. Explicit overrides win over both.
  */
 export function resolveRunBudgets(budgets: BudgetLimits, options: { live: boolean; overrides?: BudgetOverrides }): BudgetLimits {
   const resolved: BudgetLimits = { ...budgets };
-  if (options.live && resolved.deadlineMs === DEFAULT_BRIEF_DEADLINE_MS) resolved.deadlineMs = LIVE_DEFAULT_DEADLINE_MS;
+  if (options.live) {
+    for (const [key, value] of Object.entries(LIVE_DEFAULT_BUDGETS) as Array<[keyof BudgetLimits, number]>) {
+      if (resolved[key] === DEFAULT_BRIEF_BUDGETS[key]) resolved[key] = value;
+    }
+  }
   for (const [key, value] of Object.entries(options.overrides ?? {}) as Array<[keyof BudgetLimits, number | undefined]>) {
     if (value !== undefined) resolved[key] = value;
   }

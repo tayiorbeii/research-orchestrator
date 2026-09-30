@@ -121,7 +121,7 @@ npm run cli -- find --resume RUN_ID --brief revised-brief.json --out .research/r
 Write questions with obligation facts: a `dependency` fact (`packageName`), `quotation` signals
 (exact symbols), `config` keys, or `workflow` commands. Those facts become the search terms, and
 a dependency fact also schedules the repository's `package.json` for proof. Live runs default to a
-30-minute deadline; pass `--deadline-minutes <n>` or `--budget fileReads=120,...` to change the
+30-minute deadline, 32 searches, and 150 file reads (16 per repository); pass `--deadline-minutes <n>` or `--budget fileReads=120,...` to change the
 run's limits (the same overrides are `budgetOverrides` on the MCP find tool).
 
 `languages` is a narrow filter: with exactly one language it scopes source-code quotation

@@ -84,7 +84,8 @@ find options:
   --max-candidates <n>       Cap candidate repos (default: 25)
   --max-repos-to-prove <n>   Cap deep proof reads
   --deadline-minutes <n>     Wall-clock limit for the run (live default: 30; mock: 1)
-  --budget <k=n,...>         Raise/lower other run budgets, e.g. fileReads=96,queryUnits=32
+  --budget <k=n,...>         Override run budgets (live defaults: queryUnits=32 fileReads=150
+                             fileReadsPerRepo=16; mock uses the brief defaults 16/48/12)
                              (keys: maxQuestions queryUnits reconnaissanceReads fileReads
                              fileReadsPerRepo refinementRounds refinementProbes deadlineMs)
   --no-cache                 Skip writing to .research-cache/

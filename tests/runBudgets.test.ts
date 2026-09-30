@@ -9,6 +9,13 @@ describe("run budgets", () => {
     expect(resolveRunBudgets(DEFAULT_BRIEF_BUDGETS, { live: false }).deadlineMs).toBe(DEFAULT_BRIEF_BUDGETS.deadlineMs);
   });
 
+  it("raises live searches and reads to the multi-question defaults", () => {
+    const live = resolveRunBudgets(DEFAULT_BRIEF_BUDGETS, { live: true });
+    expect(live).toMatchObject({ queryUnits: 32, fileReads: 150, fileReadsPerRepo: 16 });
+    expect(resolveRunBudgets(DEFAULT_BRIEF_BUDGETS, { live: false })).toEqual(DEFAULT_BRIEF_BUDGETS);
+    expect(resolveRunBudgets({ ...DEFAULT_BRIEF_BUDGETS, fileReads: 10 }, { live: true }).fileReads).toBe(10);
+  });
+
   it("keeps a brief's own lower deadline for live runs", () => {
     expect(resolveRunBudgets({ ...DEFAULT_BRIEF_BUDGETS, deadlineMs: 20_000 }, { live: true }).deadlineMs).toBe(20_000);
   });
@@ -17,7 +24,7 @@ describe("run budgets", () => {
     const resolved = resolveRunBudgets(DEFAULT_BRIEF_BUDGETS, { live: true, overrides: { deadlineMs: 90 * 60_000, fileReads: 200 } });
     expect(resolved.deadlineMs).toBe(90 * 60_000);
     expect(resolved.fileReads).toBe(200);
-    expect(resolved.queryUnits).toBe(DEFAULT_BRIEF_BUDGETS.queryUnits);
+    expect(resolved.queryUnits).toBe(32);
   });
 
   it("parses --budget key=value lists and rejects unknown or invalid entries", () => {

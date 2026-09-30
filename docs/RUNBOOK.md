@@ -88,7 +88,7 @@ Turns a goal into grounded planning artifacts.
 | `--max-candidates <n>` | — | `25` | Cap how many candidate repos are collected. |
 | `--max-repos-to-prove <n>` | — | unset | Cap deep proof reads (limits Octocode calls / cost). |
 | `--deadline-minutes <n>` | — | 30 live / 1 mock | Wall-clock limit for the whole run. A full multi-question live run can take tens of minutes; raise it rather than letting reads stop with `run deadline reached`. |
-| `--budget <k=n,...>` | — | brief defaults | Operator budget overrides, e.g. `fileReads=120,fileReadsPerRepo=16,queryUnits=32`. Keys: `maxQuestions queryUnits reconnaissanceReads fileReads fileReadsPerRepo refinementRounds refinementProbes deadlineMs`. A brief itself cannot raise budgets (`budget_explicitly_raised`); these flags can. |
+| `--budget <k=n,...>` | — | live: queryUnits 32, fileReads 150, 16/repo; mock: 16/48/12 | Operator budget overrides, e.g. `fileReads=120,fileReadsPerRepo=16,queryUnits=32`. Keys: `maxQuestions queryUnits reconnaissanceReads fileReads fileReadsPerRepo refinementRounds refinementProbes deadlineMs`. A brief itself cannot raise budgets (`budget_explicitly_raised`); these flags can. |
 | `--no-cache` | — | off | Skip reading/writing `.research-cache/`. |
 | `--allow-inconclusive` | — | off | Exit `0` for an inconclusive run instead of `2`. |
 | `--brief <file>` | — | — | Execute a structured, validated research brief. |
