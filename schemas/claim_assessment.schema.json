@@ -6,6 +6,16 @@
   "required": ["claimId", "questionId", "subject", "assertion", "requiredObservationIds", "status", "method", "assessorOrigin", "evidencePolicyVersion", "rationale", "remainingObligations", "limitations"],
   "properties": {
     "claimId": { "type": "string", "minLength": 1 }, "questionId": { "type": "string", "minLength": 1 },
+    "fact": {
+      "type": "object",
+      "required": ["questionId", "obligationIndex", "factIndex", "kind"],
+      "properties": {
+        "questionId": { "type": "string", "minLength": 1 },
+        "obligationIndex": { "type": "integer", "minimum": 0 },
+        "factIndex": { "type": "integer", "minimum": 0 },
+        "kind": { "enum": ["dependency", "config", "workflow", "quotation"] }
+      }
+    },
     "subject": { "type": "object", "required": ["repo"], "properties": { "repo": { "type": "string", "minLength": 1 }, "revision": { "type": "string" } } },
     "assertion": { "type": "string", "minLength": 1 }, "requiredObservationIds": { "type": "array", "items": { "type": "string" } },
     "status": { "enum": ["supported", "partial", "unsupported", "contradicted", "not_assessed"] },

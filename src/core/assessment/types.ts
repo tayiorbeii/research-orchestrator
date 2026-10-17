@@ -1,8 +1,9 @@
-import { claimEvidenceOrigin, isAssessableObservation, isExactQuotationSupport, RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION, SYNTHETIC_EVIDENCE_LIMITATION } from "../evidencePolicy.js";
-import type { ClaimAssessment, SourceObservation } from "../../schemas/researchContracts.js";
+import { isAssessableObservation, isExactQuotationSupport } from "../evidencePolicy.js";
+import type { ClaimAssessment, ClaimFactRef, SourceObservation } from "../../schemas/researchContracts.js";
 import { configValueAssessor } from "./configValue.js";
 import { dependencyDeclarationAssessor } from "./dependencyDeclaration.js";
 import { workflowCommandAssessor } from "./workflowCommand.js";
+import { sameSubject, verdict } from "./verdict.js";
 import { classifySourcePath } from "../sourceSelection.js";
 
 export type ClaimTarget =
@@ -29,6 +30,8 @@ export function renderTargetAssertion(target: ClaimTarget): string {
 export interface ClaimSpec {
   claimId: string;
   questionId: string;
+  /** The brief fact this claim asserts; absent for legacy FeatureSpec claims. */
+  fact?: ClaimFactRef;
   subject: { repo: string; revision?: string };
   assertion: string;
   target?: ClaimTarget;
@@ -46,8 +49,7 @@ export const SAME_SUBJECT_RULE =
 
 const exactSourceQuotationAssessor: ClaimAssessor = (claim, observations) => {
   const matching = observations.filter((observation) =>
-    observation.repo === claim.subject.repo &&
-    (claim.subject.revision === undefined || observation.resolvedRevision === claim.subject.revision) &&
+    sameSubject(claim, observation) &&
     (claim.target?.kind !== "quotation" || !claim.target.claimScope || quotationScopeAllows(claim.target, observation)),
   );
   const supporting = matching.find((observation) =>
@@ -70,48 +72,32 @@ const exactSourceQuotationAssessor: ClaimAssessor = (claim, observations) => {
     supporting.kind === "repository_file" && classifySourcePath(supporting.path ?? "") !== undefined &&
     claim.target.signals.some((signal) => !signalOnSubstantiveLine(supporting.excerpt ?? "", signal));
   if (importOnly) {
-    return {
-      claimId: claim.claimId, questionId: claim.questionId, subject: claim.subject, assertion: claim.assertion,
-      requiredObservationIds: [supporting!.id], method: "exact_source_quotation" as const, assessorOrigin: "engine" as const,
-      evidenceOrigin: claimEvidenceOrigin(supporting!), evidencePolicyVersion: RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION,
-      rationale: "The source mentions a required signal only on import, use, require, or re-export lines; that is a lead, not evidence of implementation.",
-      remainingObligations: ["Read the file where the imported name is defined or used."],
-      limitations: ["Import lines establish a reference, not behavior.", ...(claimEvidenceOrigin(supporting!) === "synthetic" ? [SYNTHETIC_EVIDENCE_LIMITATION] : [])],
-      status: "partial",
-    };
+    return verdict(claim, "exact_source_quotation", "partial", [supporting!.id],
+      "The source mentions a required signal only on import, use, require, or re-export lines; that is a lead, not evidence of implementation.",
+      ["Import lines establish a reference, not behavior."],
+      ["Read the file where the imported name is defined or used."], supporting!.origin);
   }
   const nonEngineOnly = matching.length > 0 && !matching.some(isAssessableObservation);
   const assessedObservation = supporting ?? matching.find(isAssessableObservation);
-  const evidenceOrigin = assessedObservation ? claimEvidenceOrigin(assessedObservation) : undefined;
   const limitations = supporting ? ["Supports only that the source states the quoted text."] : [];
   if (supporting?.kind === "issue_proposal" && supporting.issueState === "closed") {
     limitations.push("The issue is closed; closure does not establish that the proposal shipped or was rejected.");
   }
-  if (evidenceOrigin === "synthetic") limitations.push(SYNTHETIC_EVIDENCE_LIMITATION);
   const status = supporting ? "supported" : matching.length === 0 || nonEngineOnly ? "not_assessed" : "unsupported";
-  const base = {
-    claimId: claim.claimId,
-    questionId: claim.questionId,
-    subject: claim.subject,
-    assertion: claim.assertion,
-    requiredObservationIds: supporting ? [supporting.id] : matching.map((observation) => observation.id),
-    method: "exact_source_quotation" as const,
-    assessorOrigin: "engine" as const,
-    ...(evidenceOrigin ? { evidenceOrigin } : {}),
-    evidencePolicyVersion: RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION,
-    rationale: supporting
-      ? claim.target?.kind === "quotation"
-        ? "One same-subject source observation from the requested path contains every required quotation signal."
-        : "The same-subject source observation contains the exact asserted quotation."
-      : nonEngineOnly
-        ? "Non-engine observations cannot produce engine-supported assessments."
-        : matching.length === 0
-        ? outOfScopeRationale(claim, observations)
-        : "The same-subject observations did not pass the Phase 1 exact quotation policy for this assertion.",
-    remainingObligations: supporting ? [] : ["Retrieve and validate a same-subject exact source quotation."],
-    limitations,
-  };
-  return { ...base, status };
+  const rationale = supporting
+    ? claim.target?.kind === "quotation"
+      ? "One same-subject source observation from the requested path contains every required quotation signal."
+      : "The same-subject source observation contains the exact asserted quotation."
+    : nonEngineOnly
+      ? "Non-engine observations cannot produce engine-supported assessments."
+      : matching.length === 0
+      ? outOfScopeRationale(claim, observations)
+      : "The same-subject observations did not pass the Phase 1 exact quotation policy for this assertion.";
+  return verdict(claim, "exact_source_quotation", status,
+    supporting ? [supporting.id] : matching.map((observation) => observation.id),
+    rationale, limitations,
+    supporting ? [] : ["Retrieve and validate a same-subject exact source quotation."],
+    assessedObservation?.origin);
 };
 
 /**
@@ -120,8 +106,7 @@ const exactSourceQuotationAssessor: ClaimAssessor = (claim, observations) => {
  * are named, with any file that states the signals as a lead.
  */
 function outOfScopeRationale(claim: ClaimSpec, observations: readonly SourceObservation[]): string {
-  const subject = observations.filter((observation) => observation.repo === claim.subject.repo &&
-    (claim.subject.revision === undefined || observation.resolvedRevision === claim.subject.revision));
+  const subject = observations.filter((observation) => sameSubject(claim, observation));
   if (subject.length === 0 || claim.target?.kind !== "quotation" || !claim.target.claimScope) {
     return "No observation was available for the claim's repository and revision context.";
   }

@@ -44,9 +44,19 @@ export const ClaimAssessmentMethodSchema = z.enum([
 export const AssessorOriginSchema = z.enum(["engine", "external", "legacy"]);
 export const ClaimEvidenceOriginSchema = z.enum(["live", "synthetic"]);
 
+/** Which brief fact a claim asserts, as data: coverage never parses a claim id. */
+export const ClaimFactRefSchema = z.object({
+  questionId: z.string().min(1),
+  obligationIndex: z.number().int().min(0),
+  factIndex: z.number().int().min(0),
+  kind: z.enum(["dependency", "config", "workflow", "quotation"]),
+});
+export type ClaimFactRef = z.infer<typeof ClaimFactRefSchema>;
+
 export const ClaimAssessmentSchema = z.object({
   claimId: z.string().min(1),
   questionId: z.string().min(1),
+  fact: ClaimFactRefSchema.optional(),
   subject: z.object({ repo: z.string().min(1), revision: z.string().optional() }),
   assertion: z.string().min(1),
   requiredObservationIds: z.array(z.string()),

@@ -8,7 +8,7 @@ import type { CandidateRepo, FeatureSpec, ProofRequirement, ScoredCandidate } fr
 import { collectEvidence } from "../collectEvidence.js";
 import { normalizeFeatureSpec } from "../normalizeFeatureSpec.js";
 import { scoreCandidate } from "../scoreCandidate.js";
-import { claimAssessorRegistry, renderTargetAssertion, type ClaimTarget } from "../assessment/types.js";
+import { assessBriefClaims } from "../assessment/claimLedger.js";
 import { RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION } from "../evidencePolicy.js";
 import { compileProbes } from "./compileProbes.js";
 import { draftBriefFromGoal } from "./draftBriefFromGoal.js";
@@ -266,7 +266,7 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
   }
 
   const allowedObservations = observations.filter((observation) => brief.allowedSourceKinds.includes(observation.kind));
-  const assessments = assessBrief(brief, candidates, allowedObservations);
+  const assessments = assessBriefClaims(brief, candidates.map((candidate) => candidate.repo), allowedObservations);
   const { coverage, outcome } = deriveBriefCoverage({
     brief, candidateRepos: candidates.map((candidate) => candidate.repo), observations, assessments,
     probes: [...historyProbes, ...scheduled], probeOutcomes: outcomes, providerName: deps.provider.name,
@@ -315,38 +315,6 @@ function legacyFeatureKey(brief: ResearchBrief): string | undefined {
 
 function legacyRunKey(brief: ResearchBrief): string {
   return legacyFeatureKey(brief)?.replace(/-/g, "_") ?? brief.id;
-}
-
-function assessBrief(brief: ResearchBrief, candidates: CandidateRepo[], observations: Parameters<NonNullable<typeof claimAssessorRegistry[string]>>[1] extends readonly (infer T)[] ? T[] : never): ResearchRunV2["assessments"] {
-  const assessments: ResearchRunV2["assessments"] = [];
-  for (const question of brief.questions) {
-    question.obligations.forEach((obligation, obligationIndex) => {
-      for (const [factIndex, fact] of obligation.facts.entries()) {
-        const method = fact.kind === "dependency" ? "dependency_declaration" : fact.kind === "config" ? "config_value" : fact.kind === "workflow" ? "workflow_command" : "exact_source_quotation";
-        const target: ClaimTarget = fact.kind === "quotation" ? fact : fact;
-        for (const candidate of candidates) {
-          const repoObservations = observations.filter((observation) => observation.repo === candidate.repo);
-          const revisionBoundFact = fact.kind !== "quotation" || !fact.path?.startsWith("issues/");
-          const revisions = revisionBoundFact
-            ? [...new Set(repoObservations.flatMap((observation) => observation.revisionStatus === "immutable" && observation.resolvedRevision ? [observation.resolvedRevision] : []))]
-            : [];
-          const base = { claimId: `claim_${question.id}_${obligationIndex}_${factIndex}_${fact.kind}_${candidate.repo.replace(/[^a-zA-Z0-9_-]/g, "_")}`, questionId: question.id, subject: { repo: candidate.repo, ...(revisions.length === 1 ? { revision: revisions[0] } : {}) }, assertion: renderTargetAssertion(target), target };
-          const assessor = claimAssessorRegistry[method];
-          if (assessor) {
-            const assessment = assessor(base, observations);
-            if (revisionBoundFact && revisions.length === 0 && repoObservations.some((observation) => observation.kind === "repository_file")) {
-              const limitation = repoObservations.some((observation) => observation.revisionStatus === "moving_ref")
-                ? "The source was read from a moving branch; its revision may change between runs."
-                : "The source revision is unknown, so this assessment cannot be tied to an immutable commit.";
-              assessment.limitations = [...new Set([...assessment.limitations, limitation])];
-            }
-            assessments.push(assessment);
-          }
-        }
-      }
-    });
-  }
-  return assessments;
 }
 
 

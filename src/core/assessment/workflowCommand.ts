@@ -1,32 +1,12 @@
 import type { ClaimAssessment, SourceObservation } from "../../schemas/researchContracts.js";
-import { claimEvidenceOrigin, isAssessableObservation, RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION, SYNTHETIC_EVIDENCE_LIMITATION } from "../evidencePolicy.js";
+import { isAssessableObservation } from "../evidencePolicy.js";
 import { renderTargetAssertion, type ClaimAssessor, type ClaimSpec } from "./types.js";
+import { sameSubject, verdict } from "./verdict.js";
 
 const assertionPattern = /^workflow command\s+(.+?)\s+(?:appears on a run: line|is present)\s+in file\s+(.+)$/i;
 
-function sameSubject(claim: ClaimSpec, observation: SourceObservation): boolean {
-  return observation.repo === claim.subject.repo &&
-    (claim.subject.revision === undefined || observation.resolvedRevision === claim.subject.revision);
-}
-
-function result(claim: ClaimSpec, status: ClaimAssessment["status"], ids: string[], rationale: string, limitations: string[], remaining: string[], observationOrigin?: SourceObservation["origin"]): ClaimAssessment {
-  const evidenceOrigin = observationOrigin ? claimEvidenceOrigin({ origin: observationOrigin }) : undefined;
-  return {
-    claimId: claim.claimId,
-    questionId: claim.questionId,
-    subject: claim.subject,
-    assertion: claim.assertion,
-    requiredObservationIds: ids,
-    status,
-    method: "workflow_command",
-    assessorOrigin: "engine",
-    ...(evidenceOrigin ? { evidenceOrigin } : {}),
-    evidencePolicyVersion: RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION,
-    rationale,
-    remainingObligations: remaining,
-    limitations: evidenceOrigin === "synthetic" ? [...limitations, SYNTHETIC_EVIDENCE_LIMITATION] : limitations,
-  };
-}
+const result = (claim: ClaimSpec, status: ClaimAssessment["status"], ids: string[], rationale: string, limitations: string[], remaining: string[], observationOrigin?: SourceObservation["origin"]) =>
+  verdict(claim, "workflow_command", status, ids, rationale, limitations, remaining, observationOrigin);
 
 function indent(line: string): number {
   return line.match(/^\s*/)?.[0].length ?? 0;

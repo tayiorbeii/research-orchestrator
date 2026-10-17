@@ -1,6 +1,7 @@
 import type { ClaimAssessment, SourceObservation } from "../../schemas/researchContracts.js";
-import { claimEvidenceOrigin, isAssessableObservation, RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION, SYNTHETIC_EVIDENCE_LIMITATION } from "../evidencePolicy.js";
+import { isAssessableObservation } from "../evidencePolicy.js";
 import { renderTargetAssertion, type ClaimAssessor, type ClaimSpec } from "./types.js";
+import { sameSubject, verdict } from "./verdict.js";
 
 const assertionPattern = /^package\s+(.+?)\s+is declared at constraint\s+(.*?)\s+in file\s+(.+)$/i;
 const sections = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;
@@ -9,29 +10,8 @@ function normalizePackageName(name: string): string {
   return name.toLowerCase().replace(/[-_.]+/g, "-");
 }
 
-function sameSubject(claim: ClaimSpec, observation: SourceObservation): boolean {
-  return observation.repo === claim.subject.repo &&
-    (claim.subject.revision === undefined || observation.resolvedRevision === claim.subject.revision);
-}
-
-function assessment(claim: ClaimSpec, status: ClaimAssessment["status"], ids: string[], rationale: string, limitations: string[], remaining: string[], observationOrigin?: SourceObservation["origin"]): ClaimAssessment {
-  const evidenceOrigin = observationOrigin ? claimEvidenceOrigin({ origin: observationOrigin }) : undefined;
-  return {
-    claimId: claim.claimId,
-    questionId: claim.questionId,
-    subject: claim.subject,
-    assertion: claim.assertion,
-    requiredObservationIds: ids,
-    status,
-    method: "dependency_declaration",
-    assessorOrigin: "engine",
-    ...(evidenceOrigin ? { evidenceOrigin } : {}),
-    evidencePolicyVersion: RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION,
-    rationale,
-    remainingObligations: remaining,
-    limitations: evidenceOrigin === "synthetic" ? [...limitations, SYNTHETIC_EVIDENCE_LIMITATION] : limitations,
-  };
-}
+const assessment = (claim: ClaimSpec, status: ClaimAssessment["status"], ids: string[], rationale: string, limitations: string[], remaining: string[], observationOrigin?: SourceObservation["origin"]) =>
+  verdict(claim, "dependency_declaration", status, ids, rationale, limitations, remaining, observationOrigin);
 
 export const dependencyDeclarationAssessor: ClaimAssessor = (claim, observations) => {
   if (claim.target && claim.assertion !== renderTargetAssertion(claim.target)) return assessment(claim, "unsupported", [], "assertion does not match structured target", ["The assertion must render the structured target exactly."], ["Use the canonical assertion rendered from the structured target."]);

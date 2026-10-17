@@ -1,6 +1,7 @@
 import type { ResearchBrief } from "../../schemas/researchBrief.js";
 import type { ClaimAssessment, QuestionCoverage, RunOutcome, SourceObservation } from "../../schemas/researchContracts.js";
 import type { ProbeOutcome, SearchProbeV2 } from "../../schemas/searchProbeV2.js";
+import { assessmentMatchesFact } from "./claimLedger.js";
 
 type BriefFact = ResearchBrief["questions"][number]["obligations"][number]["facts"][number];
 
@@ -67,10 +68,11 @@ export function obligationSatisfied(
   candidateRepos: readonly string[],
   assessments: readonly ClaimAssessment[],
 ): boolean {
-  const factSupported = (fact: BriefFact, repo: string) => assessments.some((assessment) =>
-    assessment.questionId === questionId && assessment.subject.repo === repo && assessment.status === "supported" &&
-    assessment.assessorOrigin === "engine" && assessment.claimId.startsWith(`claim_${questionId}_${obligationIndex}_${obligation.facts.indexOf(fact)}_${fact.kind}_`),
-  );
+  const factSupported = (fact: BriefFact, repo: string) => {
+    const ref = { questionId, obligationIndex, factIndex: obligation.facts.indexOf(fact), kind: fact.kind };
+    return assessments.some((assessment) =>
+      assessment.subject.repo === repo && assessment.status === "supported" && assessment.assessorOrigin === "engine" && assessmentMatchesFact(assessment, ref));
+  };
   if (obligation.combine === "all" && obligation.scope === "same_repository") {
     return candidateRepos.some((repo) => obligation.facts.every((fact) => factSupported(fact, repo)));
   }

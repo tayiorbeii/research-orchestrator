@@ -629,6 +629,7 @@
       "requiredObservationIds": [
         "obs_headcodecms_headcodecms_2"
       ],
+      "status": "supported",
       "method": "exact_source_quotation",
       "assessorOrigin": "engine",
       "evidenceOrigin": "synthetic",
@@ -638,8 +639,7 @@
       "limitations": [
         "Supports only that the source states the quoted text.",
         "Synthetic fixture observation; not a live repository finding."
-      ],
-      "status": "supported"
+      ]
     },
     {
       "claimId": "claim_server_auth_proof_justinwlin_convex-magic-link-authentication",
@@ -651,6 +651,7 @@
       "requiredObservationIds": [
         "obs_justinwlin_convex-magic-link-authentication_1"
       ],
+      "status": "unsupported",
       "method": "exact_source_quotation",
       "assessorOrigin": "engine",
       "evidenceOrigin": "synthetic",
@@ -661,8 +662,7 @@
       ],
       "limitations": [
         "Synthetic fixture observation; not a live repository finding."
-      ],
-      "status": "unsupported"
+      ]
     },
     {
       "claimId": "claim_client_flow_proof_headcodecms_headcodecms",
@@ -678,6 +678,7 @@
         "obs_headcodecms_headcodecms_3",
         "obs_headcodecms_headcodecms_4"
       ],
+      "status": "unsupported",
       "method": "exact_source_quotation",
       "assessorOrigin": "engine",
       "evidenceOrigin": "synthetic",
@@ -688,8 +689,7 @@
       ],
       "limitations": [
         "Synthetic fixture observation; not a live repository finding."
-      ],
-      "status": "unsupported"
+      ]
     },
     {
       "claimId": "claim_client_flow_proof_justinwlin_convex-magic-link-authentication",
@@ -701,6 +701,7 @@
       "requiredObservationIds": [
         "obs_justinwlin_convex-magic-link-authentication_1"
       ],
+      "status": "unsupported",
       "method": "exact_source_quotation",
       "assessorOrigin": "engine",
       "evidenceOrigin": "synthetic",
@@ -711,8 +712,7 @@
       ],
       "limitations": [
         "Synthetic fixture observation; not a live repository finding."
-      ],
-      "status": "unsupported"
+      ]
     },
     {
       "claimId": "claim_route_protection_proof_headcodecms_headcodecms",
@@ -725,6 +725,7 @@
       "requiredObservationIds": [
         "obs_headcodecms_headcodecms_4"
       ],
+      "status": "supported",
       "method": "exact_source_quotation",
       "assessorOrigin": "engine",
       "evidenceOrigin": "synthetic",
@@ -734,8 +735,7 @@
       "limitations": [
         "Supports only that the source states the quoted text.",
         "Synthetic fixture observation; not a live repository finding."
-      ],
-      "status": "supported"
+      ]
     },
     {
       "claimId": "claim_route_protection_proof_justinwlin_convex-magic-link-authentication",
@@ -747,6 +747,7 @@
       "requiredObservationIds": [
         "obs_justinwlin_convex-magic-link-authentication_1"
       ],
+      "status": "unsupported",
       "method": "exact_source_quotation",
       "assessorOrigin": "engine",
       "evidenceOrigin": "synthetic",
@@ -757,8 +758,7 @@
       ],
       "limitations": [
         "Synthetic fixture observation; not a live repository finding."
-      ],
-      "status": "unsupported"
+      ]
     }
   ],
   "coverage": [
