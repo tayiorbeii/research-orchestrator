@@ -7,6 +7,7 @@ import type { SourceObservationKind } from "../schemas/researchContracts.js";
 import { selectSourceReads, type SourceRead } from "./sourceSelection.js";
 import type { UntouchedSource } from "./sourceSelection.js";
 import { redactObject } from "./redact.js";
+import { QUOTATION_SIGNAL_WINDOW_LINES } from "./assessment/types.js";
 
 export interface CollectedEvidence {
   anchors: EvidenceAnchor[];
@@ -304,6 +305,18 @@ function resolveRelativePath(sourcePath: string, target: string): string | undef
   return normalized.join("/") || undefined;
 }
 
+/** Whole files up to this size are kept; larger ones are cut to the best hit cluster. */
+const WHOLE_FILE_EXCERPT_BYTES = 8_192;
+const WHOLE_MANIFEST_EXCERPT_BYTES = 16_384;
+
+/**
+ * Cut a large file down to the lines an assessor can use. Every hit gets a
+ * window as wide as the quotation policy's co-occurrence window, overlapping
+ * windows merge into clusters, and the cluster that states the most distinct
+ * signals is kept. The old ±2-line window around the first hit made a
+ * two-signal fact unprovable whenever the file was large and the first
+ * mention was a decoy.
+ */
 function compactLargeObservation(
   source: SourceObservation,
   anchors: EvidenceAnchor[],
@@ -312,7 +325,7 @@ function compactLargeObservation(
   isManifest: boolean,
 ): void {
   const text = source.excerpt;
-  if (text === undefined || text.length <= 8_192 || (isManifest && text.length <= 16_384)) return;
+  if (text === undefined || text.length <= WHOLE_FILE_EXCERPT_BYTES || (isManifest && text.length <= WHOLE_MANIFEST_EXCERPT_BYTES)) return;
   const relevantAnchors = anchors.filter((anchor) => anchor.repo === source.repo && anchor.path === source.path);
   if (relevantAnchors.length === 0) {
     delete source.excerpt;
@@ -322,11 +335,26 @@ function compactLargeObservation(
     delete source.anchor;
     return;
   }
-  const lineNumbers = relevantAnchors.map((anchor) => anchor.startLine ?? firstLine);
-  const firstHit = Math.min(...lineNumbers);
-  const lastHit = Math.max(...lineNumbers);
-  const excerptStart = Math.max(firstLine, firstHit - 2);
-  const excerptEnd = Math.min(firstLine + lines.length - 1, (lastHit - firstHit <= 80 ? lastHit : firstHit) + 2);
+  const lastLine = firstLine + lines.length - 1;
+  const window = QUOTATION_SIGNAL_WINDOW_LINES;
+  const hits = relevantAnchors
+    .map((anchor) => ({ line: anchor.startLine ?? firstLine, signal: anchor.matchedSignal?.toLowerCase() ?? "" }))
+    .sort((left, right) => left.line - right.line);
+  const clusters: Array<{ start: number; end: number; signals: Set<string>; hits: number }> = [];
+  for (const hit of hits) {
+    const start = Math.max(firstLine, hit.line - window);
+    const end = Math.min(lastLine, hit.line + window);
+    const last = clusters.at(-1);
+    if (last && start <= last.end + 1) {
+      last.end = Math.max(last.end, end);
+      last.signals.add(hit.signal);
+      last.hits += 1;
+    } else clusters.push({ start, end, signals: new Set([hit.signal]), hits: 1 });
+  }
+  const best = clusters.reduce((chosen, cluster) =>
+    cluster.signals.size > chosen.signals.size || (cluster.signals.size === chosen.signals.size && cluster.hits > chosen.hits) ? cluster : chosen);
+  const excerptStart = best.start;
+  const excerptEnd = best.end;
   source.excerpt = lines.slice(excerptStart - firstLine, excerptEnd - firstLine + 1).join("\n");
   source.contentHash = createHash("sha256").update(source.excerpt).digest("hex");
   source.startLine = excerptStart;
@@ -386,6 +414,9 @@ interface SignalHit {
   signal: string;
 }
 
+/** Hits per signal kept for excerpt windowing; anchors are deduped to one per signal later. */
+const MAX_HITS_PER_SIGNAL = 25;
+
 function findSignalHits(lines: string[], signals: string[], firstLine = 1): SignalHit[] {
   const hits: SignalHit[] = [];
   const seen = new Set<string>();
@@ -393,8 +424,12 @@ function findSignalHits(lines: string[], signals: string[], firstLine = 1): Sign
     const normalized = signal.trim().toLowerCase();
     if (!normalized || seen.has(normalized)) continue;
     seen.add(normalized);
-    const idx = lines.findIndex((line) => lineHasSignal(line, signal));
-    if (idx >= 0) hits.push({ line: firstLine + idx, text: lines[idx]!.trim(), signal });
+    let found = 0;
+    for (let index = 0; index < lines.length && found < MAX_HITS_PER_SIGNAL; index += 1) {
+      if (!lineHasSignal(lines[index]!, signal)) continue;
+      hits.push({ line: firstLine + index, text: lines[index]!.trim(), signal });
+      found += 1;
+    }
   }
   return hits;
 }

@@ -27,7 +27,7 @@
           "confidence": 0.95,
           "evidence": [
             {
-              "id": "ev_headcodecms_headcodecms_6",
+              "id": "ev_headcodecms_headcodecms_9",
               "provider": "mock",
               "repo": "headcodecms/headcodecms",
               "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -43,7 +43,7 @@
               "supportMethod": "exact_source_quotation"
             },
             {
-              "id": "ev_headcodecms_headcodecms_7",
+              "id": "ev_headcodecms_headcodecms_10",
               "provider": "mock",
               "repo": "headcodecms/headcodecms",
               "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -59,7 +59,7 @@
               "supportMethod": "exact_source_quotation"
             },
             {
-              "id": "ev_headcodecms_headcodecms_8",
+              "id": "ev_headcodecms_headcodecms_12",
               "provider": "mock",
               "repo": "headcodecms/headcodecms",
               "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -75,7 +75,7 @@
               "supportMethod": "exact_source_quotation"
             },
             {
-              "id": "ev_headcodecms_headcodecms_9",
+              "id": "ev_headcodecms_headcodecms_13",
               "provider": "mock",
               "repo": "headcodecms/headcodecms",
               "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -91,7 +91,7 @@
               "supportMethod": "exact_source_quotation"
             },
             {
-              "id": "ev_headcodecms_headcodecms_10",
+              "id": "ev_headcodecms_headcodecms_14",
               "provider": "mock",
               "repo": "headcodecms/headcodecms",
               "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -152,7 +152,7 @@
               "supportMethod": "exact_source_quotation"
             },
             {
-              "id": "ev_justinwlin_convex-magic-link-authentication_2",
+              "id": "ev_justinwlin_convex-magic-link-authentication_4",
               "provider": "mock",
               "repo": "justinwlin/convex-magic-link-authentication",
               "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -168,7 +168,7 @@
               "supportMethod": "exact_source_quotation"
             },
             {
-              "id": "ev_justinwlin_convex-magic-link-authentication_3",
+              "id": "ev_justinwlin_convex-magic-link-authentication_5",
               "provider": "mock",
               "repo": "justinwlin/convex-magic-link-authentication",
               "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -184,7 +184,7 @@
               "supportMethod": "exact_source_quotation"
             },
             {
-              "id": "ev_justinwlin_convex-magic-link-authentication_5",
+              "id": "ev_justinwlin_convex-magic-link-authentication_7",
               "provider": "mock",
               "repo": "justinwlin/convex-magic-link-authentication",
               "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -245,7 +245,7 @@
       "readStatus": "complete",
       "origin": "synthetic",
       "anchor": {
-        "id": "ev_headcodecms_headcodecms_3",
+        "id": "ev_headcodecms_headcodecms_4",
         "provider": "mock",
         "repo": "headcodecms/headcodecms",
         "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -279,16 +279,16 @@
       "readStatus": "complete",
       "origin": "synthetic",
       "anchor": {
-        "id": "ev_headcodecms_headcodecms_5",
+        "id": "ev_headcodecms_headcodecms_8",
         "provider": "mock",
         "repo": "headcodecms/headcodecms",
         "ref": "0123456789abcdef0123456789abcdef01234567",
         "path": "convex/auth.ts",
-        "startLine": 2,
-        "endLine": 2,
-        "matchText": "import Resend from \"@auth/core/providers/resend\";",
+        "startLine": 6,
+        "endLine": 6,
+        "matchText": "Resend({",
         "matchedSignal": "Resend",
-        "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/convex/auth.ts#L2",
+        "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/convex/auth.ts#L6",
         "role": "server_auth_proof",
         "proofLevel": "partial",
         "evidencePolicyVersion": "phase1_exact_quotation_v1",
@@ -313,7 +313,7 @@
       "readStatus": "complete",
       "origin": "synthetic",
       "anchor": {
-        "id": "ev_headcodecms_headcodecms_10",
+        "id": "ev_headcodecms_headcodecms_14",
         "provider": "mock",
         "repo": "headcodecms/headcodecms",
         "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -347,16 +347,16 @@
       "readStatus": "complete",
       "origin": "synthetic",
       "anchor": {
-        "id": "ev_headcodecms_headcodecms_13",
+        "id": "ev_headcodecms_headcodecms_20",
         "provider": "mock",
         "repo": "headcodecms/headcodecms",
         "ref": "0123456789abcdef0123456789abcdef01234567",
         "path": "proxy.ts",
-        "startLine": 3,
-        "endLine": 3,
-        "matchText": "createRouteMatcher,",
+        "startLine": 7,
+        "endLine": 7,
+        "matchText": "const isProtected = createRouteMatcher([\"/admin(.*)\"]);",
         "matchedSignal": "createRouteMatcher",
-        "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/proxy.ts#L3",
+        "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/proxy.ts#L7",
         "role": "route_protection_proof",
         "proofLevel": "partial",
         "evidencePolicyVersion": "phase1_exact_quotation_v1",
@@ -381,7 +381,7 @@
       "readStatus": "complete",
       "origin": "synthetic",
       "anchor": {
-        "id": "ev_justinwlin_convex-magic-link-authentication_10",
+        "id": "ev_justinwlin_convex-magic-link-authentication_16",
         "provider": "mock",
         "repo": "justinwlin/convex-magic-link-authentication",
         "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -873,7 +873,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_headcodecms_headcodecms_3",
+      "id": "ev_headcodecms_headcodecms_4",
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -889,7 +889,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_headcodecms_headcodecms_4",
+      "id": "ev_headcodecms_headcodecms_5",
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -905,7 +905,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_headcodecms_headcodecms_5",
+      "id": "ev_headcodecms_headcodecms_7",
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -921,7 +921,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_headcodecms_headcodecms_6",
+      "id": "ev_headcodecms_headcodecms_9",
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -937,7 +937,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_headcodecms_headcodecms_7",
+      "id": "ev_headcodecms_headcodecms_10",
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -953,7 +953,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_headcodecms_headcodecms_8",
+      "id": "ev_headcodecms_headcodecms_12",
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -969,7 +969,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_headcodecms_headcodecms_9",
+      "id": "ev_headcodecms_headcodecms_13",
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -985,7 +985,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_headcodecms_headcodecms_10",
+      "id": "ev_headcodecms_headcodecms_14",
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -1001,7 +1001,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_headcodecms_headcodecms_11",
+      "id": "ev_headcodecms_headcodecms_15",
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -1017,7 +1017,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_headcodecms_headcodecms_12",
+      "id": "ev_headcodecms_headcodecms_17",
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -1033,7 +1033,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_headcodecms_headcodecms_13",
+      "id": "ev_headcodecms_headcodecms_19",
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -1065,7 +1065,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_justinwlin_convex-magic-link-authentication_2",
+      "id": "ev_justinwlin_convex-magic-link-authentication_4",
       "provider": "mock",
       "repo": "justinwlin/convex-magic-link-authentication",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -1081,7 +1081,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_justinwlin_convex-magic-link-authentication_3",
+      "id": "ev_justinwlin_convex-magic-link-authentication_5",
       "provider": "mock",
       "repo": "justinwlin/convex-magic-link-authentication",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -1097,7 +1097,7 @@
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_justinwlin_convex-magic-link-authentication_5",
+      "id": "ev_justinwlin_convex-magic-link-authentication_7",
       "provider": "mock",
       "repo": "justinwlin/convex-magic-link-authentication",
       "ref": "0123456789abcdef0123456789abcdef01234567",
