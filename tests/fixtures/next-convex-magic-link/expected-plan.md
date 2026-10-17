@@ -1,45 +1,28 @@
 > **Synthetic/mock evidence:** fixture observations are not live repository findings.
 
-# Plan: email magic-link authentication — PARTIAL (no evidence-backed plan)
-
-> ⚠ No implementation plan is safe until the proof contract is complete. This
-> file lists recovery actions, not steps to implement. Do not build from it.
+# Plan: Next.js + Convex app with email magic links via Resend
 
 ## Objective
 
 Next.js + Convex app with email magic links via Resend
 
-## Status: inconclusive
+## What the evidence supports
 
-Reasons: 1 required question(s) remain unsatisfied., synthetic_evidence
+### Next.js Next Convex Resend in the context of: Next.js + Convex app with email magic links via Resend
 
-## Why there is no plan
+- **headcodecms/headcodecms** `proxy.ts`:5 — `} from "@convex-dev/auth/nextjs/server";` ([link](https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/proxy.ts#L5)) — Next _(pinned 0123456)_
+- **headcodecms/headcodecms** `convex/auth.ts`:6 — `Resend({` ([link](https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/convex/auth.ts#L6)) — Resend _(pinned 0123456)_
 
-The run selected 1 repository/repositories and captured
-17 evidence anchor(s) (17 exact-quotation supports), but the proof contract
-is still incomplete. Source quotations establish only what a source states; they do not establish runtime behavior.
-No implementation steps are established. Resolve the reasons above and re-run before implementing.
+## Gaps
 
-## Recovery actions
+_None: every required question is satisfied._
 
-1. Inspect research.md "What was searched" to confirm probes targeted the right entities.
-2. If discovery missed the project, add the official repo/docs URL as an explicit hint or candidate.
-3. Provide structured hints (requiredConcepts, likelyFiles, proofRequirements) for novel domains.
-4. Re-run into a new output directory and compare; do not overwrite inconclusive artifacts.
+## Verification steps
 
-## Probes attempted
-
-- [high_precision] "convexAuth" "Resend"
-- [high_precision] "useAuthActions" "signIn('resend'"
-- [high_precision] "convexAuthNextjsMiddleware" "createRouteMatcher"
-- [recall] "@convex-dev/auth" "Resend"
-- [recall] "@auth/core" "Resend"
-- [path_targeted] "Resend(" path:convex/auth.ts
-- [path_targeted] "convexAuth" path:convex/http.ts
-- [path_targeted] "Resend(" path:convex/auth.config.ts
-- [path_targeted] "convexAuthNextjsMiddleware" path:middleware.ts
-- [repo_search] Next.js Convex email magic-link authentication
+1. Open each supported finding at its cited revision and confirm the surrounding behavior matches the question.
+2. Treat leads as places to look, never as proof; promote one only after reading the implementation it points at.
+3. Resolve every gap (read the listed files, or resume the run with `--resume <run-id>`) before deciding how to implement.
 
 ## References
 
-- [headcodecms/headcodecms](https://github.com/headcodecms/headcodecms) (partially supported; do not implement yet)
+- [headcodecms/headcodecms](https://github.com/headcodecms/headcodecms) — 2 supported claim(s), 4 file(s) read

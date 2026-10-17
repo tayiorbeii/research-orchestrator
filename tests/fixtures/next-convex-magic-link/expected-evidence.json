@@ -5,240 +5,255 @@
   "createdAt": "2026-06-30T00:00:00.000Z",
   "goal": "Next.js + Convex app with email magic links via Resend",
   "featureKey": "next-convex-magic-link-auth",
-  "status": "partial",
+  "status": "complete",
   "statusReasons": [
-    "1 required question(s) remain unsatisfied.",
     "synthetic_evidence"
   ],
   "selectedRepos": [
     "headcodecms/headcodecms"
   ],
-  "scoredCandidates": [
+  "scoredCandidates": [],
+  "schemaVersion": 2,
+  "brief": {
+    "id": "goal-next-js-convex-app-with-email-magic-links-via-re",
+    "revision": 1
+  },
+  "probes": [
     {
-      "repo": "headcodecms/headcodecms",
-      "score": 0.3,
-      "class": "reference",
-      "positiveSignals": [
-        {
-          "key": "dependency_declaration",
-          "label": "Dependency manifest states package declarations.",
-          "weight": 20,
-          "source": "file",
-          "confidence": 0.95,
-          "evidence": [
-            {
-              "id": "ev_headcodecms_headcodecms_9",
-              "provider": "mock",
-              "repo": "headcodecms/headcodecms",
-              "ref": "0123456789abcdef0123456789abcdef01234567",
-              "path": "package.json",
-              "startLine": 5,
-              "endLine": 5,
-              "matchText": "\"next\": \"^15.0.0\",",
-              "matchedSignal": "next",
-              "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L5",
-              "role": "dependency_proof",
-              "proofLevel": "partial",
-              "evidencePolicyVersion": "phase1_exact_quotation_v1",
-              "supportMethod": "exact_source_quotation"
-            },
-            {
-              "id": "ev_headcodecms_headcodecms_10",
-              "provider": "mock",
-              "repo": "headcodecms/headcodecms",
-              "ref": "0123456789abcdef0123456789abcdef01234567",
-              "path": "package.json",
-              "startLine": 7,
-              "endLine": 7,
-              "matchText": "\"convex\": \"^1.17.0\",",
-              "matchedSignal": "convex",
-              "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L7",
-              "role": "dependency_proof",
-              "proofLevel": "partial",
-              "evidencePolicyVersion": "phase1_exact_quotation_v1",
-              "supportMethod": "exact_source_quotation"
-            },
-            {
-              "id": "ev_headcodecms_headcodecms_12",
-              "provider": "mock",
-              "repo": "headcodecms/headcodecms",
-              "ref": "0123456789abcdef0123456789abcdef01234567",
-              "path": "package.json",
-              "startLine": 8,
-              "endLine": 8,
-              "matchText": "\"@convex-dev/auth\": \"^0.0.81\",",
-              "matchedSignal": "@convex-dev/auth",
-              "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L8",
-              "role": "dependency_proof",
-              "proofLevel": "partial",
-              "evidencePolicyVersion": "phase1_exact_quotation_v1",
-              "supportMethod": "exact_source_quotation"
-            },
-            {
-              "id": "ev_headcodecms_headcodecms_13",
-              "provider": "mock",
-              "repo": "headcodecms/headcodecms",
-              "ref": "0123456789abcdef0123456789abcdef01234567",
-              "path": "package.json",
-              "startLine": 9,
-              "endLine": 9,
-              "matchText": "\"@auth/core\": \"^0.37.0\",",
-              "matchedSignal": "@auth/core",
-              "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L9",
-              "role": "dependency_proof",
-              "proofLevel": "partial",
-              "evidencePolicyVersion": "phase1_exact_quotation_v1",
-              "supportMethod": "exact_source_quotation"
-            },
-            {
-              "id": "ev_headcodecms_headcodecms_14",
-              "provider": "mock",
-              "repo": "headcodecms/headcodecms",
-              "ref": "0123456789abcdef0123456789abcdef01234567",
-              "path": "package.json",
-              "startLine": 10,
-              "endLine": 10,
-              "matchText": "\"resend\": \"^4.0.0\"",
-              "matchedSignal": "resend",
-              "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L10",
-              "role": "dependency_proof",
-              "proofLevel": "partial",
-              "evidencePolicyVersion": "phase1_exact_quotation_v1",
-              "supportMethod": "exact_source_quotation"
-            }
-          ]
-        },
-        {
-          "key": "production_shaped",
-          "label": "Repo is shaped like a real application.",
-          "weight": 10,
-          "source": "metadata",
-          "confidence": 0.7
-        }
+      "id": "p-q1-v-next-js-q1-1",
+      "questionIds": [
+        "q1"
       ],
-      "negativeSignals": [],
-      "missingProof": [],
-      "rejectionReasons": [
-        "no_implementation_files"
+      "mechanismIds": [],
+      "termIds": [
+        "v-next-js-q1"
       ],
-      "nextAction": "read_more"
+      "purpose": "discovery",
+      "intent": "Next.js Next Convex Resend in the context of: Next.js + Convex app with email magic links via Resend",
+      "providerQuery": "Next.js",
+      "providerArgs": {
+        "endpoint": "codeSearch",
+        "query": "Next.js"
+      },
+      "expectedSourceKinds": [
+        "repository_file",
+        "repository_metadata"
+      ],
+      "expectedPaths": [],
+      "capabilityVersion": "mock-fixture-v1",
+      "rationale": "Search for question-scoped anchor Next.js for question q1.",
+      "alternativesLeftOpen": [],
+      "predecessorProbeIds": []
     },
     {
-      "repo": "justinwlin/convex-magic-link-authentication",
-      "score": 0,
-      "class": "docs",
-      "positiveSignals": [
-        {
-          "key": "env_deployment_docs",
-          "label": "Environment/deployment documentation present.",
-          "weight": 10,
-          "source": "file",
-          "confidence": 0.95,
-          "evidence": [
-            {
-              "id": "ev_justinwlin_convex-magic-link-authentication_1",
-              "provider": "mock",
-              "repo": "justinwlin/convex-magic-link-authentication",
-              "ref": "0123456789abcdef0123456789abcdef01234567",
-              "path": "README.md",
-              "startLine": 3,
-              "endLine": 3,
-              "matchText": "A guide to setting up magic-link auth with Convex Auth and Resend.",
-              "matchedSignal": "Resend",
-              "url": "https://github.com/justinwlin/convex-magic-link-authentication/blob/0123456789abcdef0123456789abcdef01234567/README.md#L3",
-              "role": "docs_reference",
-              "proofLevel": "partial",
-              "evidencePolicyVersion": "phase1_exact_quotation_v1",
-              "supportMethod": "exact_source_quotation"
-            },
-            {
-              "id": "ev_justinwlin_convex-magic-link-authentication_4",
-              "provider": "mock",
-              "repo": "justinwlin/convex-magic-link-authentication",
-              "ref": "0123456789abcdef0123456789abcdef01234567",
-              "path": "README.md",
-              "startLine": 14,
-              "endLine": 14,
-              "matchText": "Then call useAuthActions().signIn(\"resend\", formData) from your login form.",
-              "matchedSignal": "useAuthActions",
-              "url": "https://github.com/justinwlin/convex-magic-link-authentication/blob/0123456789abcdef0123456789abcdef01234567/README.md#L14",
-              "role": "docs_reference",
-              "proofLevel": "partial",
-              "evidencePolicyVersion": "phase1_exact_quotation_v1",
-              "supportMethod": "exact_source_quotation"
-            },
-            {
-              "id": "ev_justinwlin_convex-magic-link-authentication_5",
-              "provider": "mock",
-              "repo": "justinwlin/convex-magic-link-authentication",
-              "ref": "0123456789abcdef0123456789abcdef01234567",
-              "path": "README.md",
-              "startLine": 14,
-              "endLine": 14,
-              "matchText": "Then call useAuthActions().signIn(\"resend\", formData) from your login form.",
-              "matchedSignal": "signIn",
-              "url": "https://github.com/justinwlin/convex-magic-link-authentication/blob/0123456789abcdef0123456789abcdef01234567/README.md#L14",
-              "role": "docs_reference",
-              "proofLevel": "partial",
-              "evidencePolicyVersion": "phase1_exact_quotation_v1",
-              "supportMethod": "exact_source_quotation"
-            },
-            {
-              "id": "ev_justinwlin_convex-magic-link-authentication_7",
-              "provider": "mock",
-              "repo": "justinwlin/convex-magic-link-authentication",
-              "ref": "0123456789abcdef0123456789abcdef01234567",
-              "path": "README.md",
-              "startLine": 14,
-              "endLine": 14,
-              "matchText": "Then call useAuthActions().signIn(\"resend\", formData) from your login form.",
-              "matchedSignal": "signIn(\"resend\"",
-              "url": "https://github.com/justinwlin/convex-magic-link-authentication/blob/0123456789abcdef0123456789abcdef01234567/README.md#L14",
-              "role": "docs_reference",
-              "proofLevel": "partial",
-              "evidencePolicyVersion": "phase1_exact_quotation_v1",
-              "supportMethod": "exact_source_quotation"
-            }
-          ]
-        }
+      "id": "p-q1-v-next-q1-2",
+      "questionIds": [
+        "q1"
       ],
-      "negativeSignals": [
-        {
-          "key": "docs_only",
-          "label": "Only documentation files matched — no implementation surface.",
-          "weight": -25,
-          "source": "metadata",
-          "confidence": 0.8
-        }
+      "mechanismIds": [],
+      "termIds": [
+        "v-next-q1"
       ],
-      "missingProof": [
-        "dependency_proof: package.json proves Next.js, Convex, Convex Auth, and email provider dependencies.",
-        "server_auth_proof: Convex auth provider configured with Resend or equivalent email provider.",
-        "client_flow_proof: Client login flow calls useAuthActions().signIn for email link.",
-        "route_protection_proof: Middleware/proxy protects routes using Convex auth."
+      "purpose": "discovery",
+      "intent": "Next.js Next Convex Resend in the context of: Next.js + Convex app with email magic links via Resend",
+      "providerQuery": "Next",
+      "providerArgs": {
+        "endpoint": "codeSearch",
+        "query": "Next"
+      },
+      "expectedSourceKinds": [
+        "repository_file",
+        "repository_metadata"
       ],
-      "rejectionReasons": [
-        "docs_only",
-        "no_dependency_proof",
-        "no_implementation_files"
+      "expectedPaths": [],
+      "capabilityVersion": "mock-fixture-v1",
+      "rationale": "Search for question-scoped anchor Next for question q1.",
+      "alternativesLeftOpen": [],
+      "predecessorProbeIds": []
+    },
+    {
+      "id": "p-q1-v-convex-q1-3",
+      "questionIds": [
+        "q1"
       ],
-      "nextAction": "reject"
+      "mechanismIds": [],
+      "termIds": [
+        "v-convex-q1"
+      ],
+      "purpose": "discovery",
+      "intent": "Next.js Next Convex Resend in the context of: Next.js + Convex app with email magic links via Resend",
+      "providerQuery": "Convex",
+      "providerArgs": {
+        "endpoint": "codeSearch",
+        "query": "Convex"
+      },
+      "expectedSourceKinds": [
+        "repository_file",
+        "repository_metadata"
+      ],
+      "expectedPaths": [],
+      "capabilityVersion": "mock-fixture-v1",
+      "rationale": "Search for question-scoped anchor Convex for question q1.",
+      "alternativesLeftOpen": [],
+      "predecessorProbeIds": []
+    },
+    {
+      "id": "p-q1-v-resend-q1-4",
+      "questionIds": [
+        "q1"
+      ],
+      "mechanismIds": [],
+      "termIds": [
+        "v-resend-q1"
+      ],
+      "purpose": "discovery",
+      "intent": "Next.js Next Convex Resend in the context of: Next.js + Convex app with email magic links via Resend",
+      "providerQuery": "Resend",
+      "providerArgs": {
+        "endpoint": "codeSearch",
+        "query": "Resend"
+      },
+      "expectedSourceKinds": [
+        "repository_file",
+        "repository_metadata"
+      ],
+      "expectedPaths": [],
+      "capabilityVersion": "mock-fixture-v1",
+      "rationale": "Search for question-scoped anchor Resend for question q1.",
+      "alternativesLeftOpen": [],
+      "predecessorProbeIds": []
     }
   ],
-  "schemaVersion": 2,
+  "probeOutcomes": [
+    {
+      "probeId": "p-q1-v-next-js-q1-1",
+      "status": "succeeded",
+      "resultClass": "relevant_leads",
+      "basis": "Provider returned 8 result(s).",
+      "resultIds": [
+        "headcodecms/headcodecms:package.json",
+        "headcodecms/headcodecms:convex/auth.ts",
+        "headcodecms/headcodecms:app/(admin)/admin/login/page.tsx",
+        "headcodecms/headcodecms:proxy.ts",
+        "justinwlin/convex-magic-link-authentication:README.md",
+        "justinwlin/convex-magic-link-authentication:README.md",
+        "justinwlin/convex-magic-link-authentication:README.md",
+        "justinwlin/convex-magic-link-authentication:README.md"
+      ],
+      "queryUnits": 1,
+      "requestCount": 1,
+      "durationMs": 0,
+      "predecessorProbeIds": []
+    },
+    {
+      "probeId": "p-q1-v-next-q1-2",
+      "status": "succeeded",
+      "resultClass": "relevant_leads",
+      "basis": "Provider returned 8 result(s).",
+      "resultIds": [
+        "headcodecms/headcodecms:package.json",
+        "headcodecms/headcodecms:convex/auth.ts",
+        "headcodecms/headcodecms:app/(admin)/admin/login/page.tsx",
+        "headcodecms/headcodecms:proxy.ts",
+        "justinwlin/convex-magic-link-authentication:README.md",
+        "justinwlin/convex-magic-link-authentication:README.md",
+        "justinwlin/convex-magic-link-authentication:README.md",
+        "justinwlin/convex-magic-link-authentication:README.md"
+      ],
+      "queryUnits": 1,
+      "requestCount": 1,
+      "durationMs": 0,
+      "predecessorProbeIds": []
+    },
+    {
+      "probeId": "p-q1-v-convex-q1-3",
+      "status": "succeeded",
+      "resultClass": "relevant_leads",
+      "basis": "Provider returned 8 result(s).",
+      "resultIds": [
+        "headcodecms/headcodecms:package.json",
+        "headcodecms/headcodecms:convex/auth.ts",
+        "headcodecms/headcodecms:app/(admin)/admin/login/page.tsx",
+        "headcodecms/headcodecms:proxy.ts",
+        "justinwlin/convex-magic-link-authentication:README.md",
+        "justinwlin/convex-magic-link-authentication:README.md",
+        "justinwlin/convex-magic-link-authentication:README.md",
+        "justinwlin/convex-magic-link-authentication:README.md"
+      ],
+      "queryUnits": 1,
+      "requestCount": 1,
+      "durationMs": 0,
+      "predecessorProbeIds": []
+    },
+    {
+      "probeId": "p-q1-v-resend-q1-4",
+      "status": "succeeded",
+      "resultClass": "relevant_leads",
+      "basis": "Provider returned 8 result(s).",
+      "resultIds": [
+        "headcodecms/headcodecms:package.json",
+        "headcodecms/headcodecms:convex/auth.ts",
+        "headcodecms/headcodecms:app/(admin)/admin/login/page.tsx",
+        "headcodecms/headcodecms:proxy.ts",
+        "justinwlin/convex-magic-link-authentication:README.md",
+        "justinwlin/convex-magic-link-authentication:README.md",
+        "justinwlin/convex-magic-link-authentication:README.md",
+        "justinwlin/convex-magic-link-authentication:README.md"
+      ],
+      "queryUnits": 1,
+      "requestCount": 1,
+      "durationMs": 0,
+      "predecessorProbeIds": []
+    }
+  ],
+  "budgetLedger": {
+    "limits": {
+      "maxQuestions": 6,
+      "queryUnits": 16,
+      "reconnaissanceReads": 4,
+      "fileReads": 48,
+      "fileReadsPerRepo": 12,
+      "refinementRounds": 1,
+      "refinementProbes": 4,
+      "deadlineMs": 60000
+    },
+    "consumed": {
+      "queryUnits": 4,
+      "rpcCount": 11,
+      "unbudgetedMetadataCalls": 2,
+      "metadataCallBreakdown": {
+        "repoMetadata": 2
+      },
+      "reconnaissanceReads": 0,
+      "fileReads": 5,
+      "fileReadsByRepo": {
+        "headcodecms/headcodecms": 4,
+        "justinwlin/convex-magic-link-authentication": 1
+      },
+      "refinementRounds": 0,
+      "refinementProbes": 0
+    },
+    "startedAt": "2026-06-30T00:00:00.000Z",
+    "deadlineAt": "2026-06-30T00:01:00.000Z",
+    "cancelled": false,
+    "reserved": {
+      "queryUnits": 0
+    },
+    "elapsedMs": 0
+  },
   "observations": [
     {
       "id": "obs_headcodecms_headcodecms_1",
       "kind": "repository_file",
       "repo": "headcodecms/headcodecms",
-      "path": "app/(admin)/admin/login/page.tsx",
+      "path": "package.json",
       "requestedRevision": "main",
       "resolvedRevision": "0123456789abcdef0123456789abcdef01234567",
       "revisionStatus": "immutable",
-      "excerpt": "\"use client\";\nimport { useAuthActions } from \"@convex-dev/auth/react\";\nimport { useState } from \"react\";\n\nexport default function LoginPage() {\n  const { signIn } = useAuthActions();\n  const [sent, setSent] = useState(false);\n\n  return (\n    <form\n      onSubmit={(event) => {\n        event.preventDefault();\n        const formData = new FormData(event.currentTarget);\n        void signIn('resend', formData).then(() => setSent(true));\n      }}\n    >\n      {sent ? <p>Check your email for a magic link.</p> : (\n        <>\n          <input name=\"email\" type=\"email\" required />\n          <button type=\"submit\">Send magic link</button>\n        </>\n      )}\n    </form>\n  );\n}\n",
-      "contentHash": "57c89899d96a0a16dcba9098c4460415a292fd766ce7155996c20c1ec783f83b",
+      "excerpt": "{\n  \"name\": \"headcodecms\",\n  \"private\": true,\n  \"dependencies\": {\n    \"next\": \"^15.0.0\",\n    \"react\": \"^19.0.0\",\n    \"convex\": \"^1.17.0\",\n    \"@convex-dev/auth\": \"^0.0.81\",\n    \"@auth/core\": \"^0.37.0\",\n    \"resend\": \"^4.0.0\"\n  }\n}\n",
+      "contentHash": "bc21da1e92289c277721abfcb767c7a54dba18cad6c6c328407c9d10d9353b67",
       "startLine": 1,
-      "endLine": 26,
+      "endLine": 13,
       "retrievedAt": "2026-06-30T00:00:00.000Z",
       "provider": "mock",
       "retrievalMethod": "getFile",
@@ -249,13 +264,13 @@
         "provider": "mock",
         "repo": "headcodecms/headcodecms",
         "ref": "0123456789abcdef0123456789abcdef01234567",
-        "path": "app/(admin)/admin/login/page.tsx",
-        "startLine": 14,
-        "endLine": 14,
-        "matchText": "void signIn('resend', formData).then(() => setSent(true));",
-        "matchedSignal": "signIn('resend'",
-        "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/app/(admin)/admin/login/page.tsx#L14",
-        "role": "client_flow_proof",
+        "path": "package.json",
+        "startLine": 10,
+        "endLine": 10,
+        "matchText": "\"resend\": \"^4.0.0\"",
+        "matchedSignal": "Resend",
+        "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L10",
+        "role": "q1_0_3",
         "proofLevel": "partial",
         "evidencePolicyVersion": "phase1_exact_quotation_v1",
         "supportMethod": "exact_source_quotation"
@@ -279,7 +294,7 @@
       "readStatus": "complete",
       "origin": "synthetic",
       "anchor": {
-        "id": "ev_headcodecms_headcodecms_8",
+        "id": "ev_headcodecms_headcodecms_7",
         "provider": "mock",
         "repo": "headcodecms/headcodecms",
         "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -289,7 +304,7 @@
         "matchText": "Resend({",
         "matchedSignal": "Resend",
         "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/convex/auth.ts#L6",
-        "role": "server_auth_proof",
+        "role": "q1_0_3",
         "proofLevel": "partial",
         "evidencePolicyVersion": "phase1_exact_quotation_v1",
         "supportMethod": "exact_source_quotation"
@@ -299,31 +314,31 @@
       "id": "obs_headcodecms_headcodecms_3",
       "kind": "repository_file",
       "repo": "headcodecms/headcodecms",
-      "path": "package.json",
+      "path": "app/(admin)/admin/login/page.tsx",
       "requestedRevision": "main",
       "resolvedRevision": "0123456789abcdef0123456789abcdef01234567",
       "revisionStatus": "immutable",
-      "excerpt": "{\n  \"name\": \"headcodecms\",\n  \"private\": true,\n  \"dependencies\": {\n    \"next\": \"^15.0.0\",\n    \"react\": \"^19.0.0\",\n    \"convex\": \"^1.17.0\",\n    \"@convex-dev/auth\": \"^0.0.81\",\n    \"@auth/core\": \"^0.37.0\",\n    \"resend\": \"^4.0.0\"\n  }\n}\n",
-      "contentHash": "bc21da1e92289c277721abfcb767c7a54dba18cad6c6c328407c9d10d9353b67",
+      "excerpt": "\"use client\";\nimport { useAuthActions } from \"@convex-dev/auth/react\";\nimport { useState } from \"react\";\n\nexport default function LoginPage() {\n  const { signIn } = useAuthActions();\n  const [sent, setSent] = useState(false);\n\n  return (\n    <form\n      onSubmit={(event) => {\n        event.preventDefault();\n        const formData = new FormData(event.currentTarget);\n        void signIn('resend', formData).then(() => setSent(true));\n      }}\n    >\n      {sent ? <p>Check your email for a magic link.</p> : (\n        <>\n          <input name=\"email\" type=\"email\" required />\n          <button type=\"submit\">Send magic link</button>\n        </>\n      )}\n    </form>\n  );\n}\n",
+      "contentHash": "57c89899d96a0a16dcba9098c4460415a292fd766ce7155996c20c1ec783f83b",
       "startLine": 1,
-      "endLine": 13,
+      "endLine": 26,
       "retrievedAt": "2026-06-30T00:00:00.000Z",
       "provider": "mock",
       "retrievalMethod": "getFile",
       "readStatus": "complete",
       "origin": "synthetic",
       "anchor": {
-        "id": "ev_headcodecms_headcodecms_14",
+        "id": "ev_headcodecms_headcodecms_9",
         "provider": "mock",
         "repo": "headcodecms/headcodecms",
         "ref": "0123456789abcdef0123456789abcdef01234567",
-        "path": "package.json",
-        "startLine": 10,
-        "endLine": 10,
-        "matchText": "\"resend\": \"^4.0.0\"",
-        "matchedSignal": "resend",
-        "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L10",
-        "role": "dependency_proof",
+        "path": "app/(admin)/admin/login/page.tsx",
+        "startLine": 14,
+        "endLine": 14,
+        "matchText": "void signIn('resend', formData).then(() => setSent(true));",
+        "matchedSignal": "Resend",
+        "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/app/(admin)/admin/login/page.tsx#L14",
+        "role": "q1_0_3",
         "proofLevel": "partial",
         "evidencePolicyVersion": "phase1_exact_quotation_v1",
         "supportMethod": "exact_source_quotation"
@@ -347,17 +362,17 @@
       "readStatus": "complete",
       "origin": "synthetic",
       "anchor": {
-        "id": "ev_headcodecms_headcodecms_20",
+        "id": "ev_headcodecms_headcodecms_10",
         "provider": "mock",
         "repo": "headcodecms/headcodecms",
         "ref": "0123456789abcdef0123456789abcdef01234567",
         "path": "proxy.ts",
-        "startLine": 7,
-        "endLine": 7,
-        "matchText": "const isProtected = createRouteMatcher([\"/admin(.*)\"]);",
-        "matchedSignal": "createRouteMatcher",
-        "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/proxy.ts#L7",
-        "role": "route_protection_proof",
+        "startLine": 5,
+        "endLine": 5,
+        "matchText": "} from \"@convex-dev/auth/nextjs/server\";",
+        "matchedSignal": "Convex",
+        "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/proxy.ts#L5",
+        "role": "q1_0_2",
         "proofLevel": "partial",
         "evidencePolicyVersion": "phase1_exact_quotation_v1",
         "supportMethod": "exact_source_quotation"
@@ -381,7 +396,7 @@
       "readStatus": "complete",
       "origin": "synthetic",
       "anchor": {
-        "id": "ev_justinwlin_convex-magic-link-authentication_16",
+        "id": "ev_justinwlin_convex-magic-link-authentication_6",
         "provider": "mock",
         "repo": "justinwlin/convex-magic-link-authentication",
         "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -389,9 +404,9 @@
         "startLine": 14,
         "endLine": 14,
         "matchText": "Then call useAuthActions().signIn(\"resend\", formData) from your login form.",
-        "matchedSignal": "signIn",
+        "matchedSignal": "Resend",
         "url": "https://github.com/justinwlin/convex-magic-link-authentication/blob/0123456789abcdef0123456789abcdef01234567/README.md#L14",
-        "role": "docs_reference",
+        "role": "q1_0_3",
         "proofLevel": "partial",
         "evidencePolicyVersion": "phase1_exact_quotation_v1",
         "supportMethod": "exact_source_quotation"
@@ -404,274 +419,19 @@
   ],
   "assessments": [
     {
-      "claimId": "claim_dependency_proof_headcodecms_headcodecms_next",
-      "questionId": "question_dependency_proof",
+      "claimId": "claim_q1_0_0_quotation_headcodecms_headcodecms",
+      "questionId": "q1",
+      "fact": {
+        "questionId": "q1",
+        "obligationIndex": 0,
+        "factIndex": 0,
+        "kind": "quotation"
+      },
       "subject": {
         "repo": "headcodecms/headcodecms",
         "revision": "0123456789abcdef0123456789abcdef01234567"
       },
-      "assertion": "package next is declared in file package.json",
-      "requiredObservationIds": [
-        "obs_headcodecms_headcodecms_3"
-      ],
-      "status": "supported",
-      "method": "dependency_declaration",
-      "assessorOrigin": "engine",
-      "evidenceOrigin": "synthetic",
-      "evidencePolicyVersion": "phase2_claim_evidence_v2",
-      "rationale": "The parsed declaration matches the package name and literal constraint in the same-subject observation.",
-      "remainingObligations": [],
-      "limitations": [
-        "Declaration was found in dependencies at observed constraint ^15.0.0; this does not prove invocation, installation, or enforcement.",
-        "Synthetic fixture observation; not a live repository finding."
-      ]
-    },
-    {
-      "claimId": "claim_dependency_proof_headcodecms_headcodecms_convex",
-      "questionId": "question_dependency_proof",
-      "subject": {
-        "repo": "headcodecms/headcodecms",
-        "revision": "0123456789abcdef0123456789abcdef01234567"
-      },
-      "assertion": "package convex is declared in file package.json",
-      "requiredObservationIds": [
-        "obs_headcodecms_headcodecms_3"
-      ],
-      "status": "supported",
-      "method": "dependency_declaration",
-      "assessorOrigin": "engine",
-      "evidenceOrigin": "synthetic",
-      "evidencePolicyVersion": "phase2_claim_evidence_v2",
-      "rationale": "The parsed declaration matches the package name and literal constraint in the same-subject observation.",
-      "remainingObligations": [],
-      "limitations": [
-        "Declaration was found in dependencies at observed constraint ^1.17.0; this does not prove invocation, installation, or enforcement.",
-        "Synthetic fixture observation; not a live repository finding."
-      ]
-    },
-    {
-      "claimId": "claim_dependency_proof_headcodecms_headcodecms__convex-dev_auth",
-      "questionId": "question_dependency_proof",
-      "subject": {
-        "repo": "headcodecms/headcodecms",
-        "revision": "0123456789abcdef0123456789abcdef01234567"
-      },
-      "assertion": "package @convex-dev/auth is declared in file package.json",
-      "requiredObservationIds": [
-        "obs_headcodecms_headcodecms_3"
-      ],
-      "status": "supported",
-      "method": "dependency_declaration",
-      "assessorOrigin": "engine",
-      "evidenceOrigin": "synthetic",
-      "evidencePolicyVersion": "phase2_claim_evidence_v2",
-      "rationale": "The parsed declaration matches the package name and literal constraint in the same-subject observation.",
-      "remainingObligations": [],
-      "limitations": [
-        "Declaration was found in dependencies at observed constraint ^0.0.81; this does not prove invocation, installation, or enforcement.",
-        "Synthetic fixture observation; not a live repository finding."
-      ]
-    },
-    {
-      "claimId": "claim_dependency_proof_headcodecms_headcodecms__auth_core",
-      "questionId": "question_dependency_proof",
-      "subject": {
-        "repo": "headcodecms/headcodecms",
-        "revision": "0123456789abcdef0123456789abcdef01234567"
-      },
-      "assertion": "package @auth/core is declared in file package.json",
-      "requiredObservationIds": [
-        "obs_headcodecms_headcodecms_3"
-      ],
-      "status": "supported",
-      "method": "dependency_declaration",
-      "assessorOrigin": "engine",
-      "evidenceOrigin": "synthetic",
-      "evidencePolicyVersion": "phase2_claim_evidence_v2",
-      "rationale": "The parsed declaration matches the package name and literal constraint in the same-subject observation.",
-      "remainingObligations": [],
-      "limitations": [
-        "Declaration was found in dependencies at observed constraint ^0.37.0; this does not prove invocation, installation, or enforcement.",
-        "Synthetic fixture observation; not a live repository finding."
-      ]
-    },
-    {
-      "claimId": "claim_dependency_proof_headcodecms_headcodecms_resend",
-      "questionId": "question_dependency_proof",
-      "subject": {
-        "repo": "headcodecms/headcodecms",
-        "revision": "0123456789abcdef0123456789abcdef01234567"
-      },
-      "assertion": "package resend is declared in file package.json",
-      "requiredObservationIds": [
-        "obs_headcodecms_headcodecms_3"
-      ],
-      "status": "supported",
-      "method": "dependency_declaration",
-      "assessorOrigin": "engine",
-      "evidenceOrigin": "synthetic",
-      "evidencePolicyVersion": "phase2_claim_evidence_v2",
-      "rationale": "The parsed declaration matches the package name and literal constraint in the same-subject observation.",
-      "remainingObligations": [],
-      "limitations": [
-        "Declaration was found in dependencies at observed constraint ^4.0.0; this does not prove invocation, installation, or enforcement.",
-        "Synthetic fixture observation; not a live repository finding."
-      ]
-    },
-    {
-      "claimId": "claim_dependency_proof_justinwlin_convex-magic-link-authentication_next",
-      "questionId": "question_dependency_proof",
-      "subject": {
-        "repo": "justinwlin/convex-magic-link-authentication"
-      },
-      "assertion": "package next is declared in file package.json",
-      "requiredObservationIds": [],
-      "status": "not_assessed",
-      "method": "dependency_declaration",
-      "assessorOrigin": "engine",
-      "evidencePolicyVersion": "phase2_claim_evidence_v2",
-      "rationale": "No same-repository, matching-revision observation was available for the asserted file.",
-      "remainingObligations": [
-        "Read the asserted file at the claim's repository revision."
-      ],
-      "limitations": [
-        "An exact resolved revision is required when the claim names one."
-      ]
-    },
-    {
-      "claimId": "claim_dependency_proof_justinwlin_convex-magic-link-authentication_convex",
-      "questionId": "question_dependency_proof",
-      "subject": {
-        "repo": "justinwlin/convex-magic-link-authentication"
-      },
-      "assertion": "package convex is declared in file package.json",
-      "requiredObservationIds": [],
-      "status": "not_assessed",
-      "method": "dependency_declaration",
-      "assessorOrigin": "engine",
-      "evidencePolicyVersion": "phase2_claim_evidence_v2",
-      "rationale": "No same-repository, matching-revision observation was available for the asserted file.",
-      "remainingObligations": [
-        "Read the asserted file at the claim's repository revision."
-      ],
-      "limitations": [
-        "An exact resolved revision is required when the claim names one."
-      ]
-    },
-    {
-      "claimId": "claim_dependency_proof_justinwlin_convex-magic-link-authentication__convex-dev_auth",
-      "questionId": "question_dependency_proof",
-      "subject": {
-        "repo": "justinwlin/convex-magic-link-authentication"
-      },
-      "assertion": "package @convex-dev/auth is declared in file package.json",
-      "requiredObservationIds": [],
-      "status": "not_assessed",
-      "method": "dependency_declaration",
-      "assessorOrigin": "engine",
-      "evidencePolicyVersion": "phase2_claim_evidence_v2",
-      "rationale": "No same-repository, matching-revision observation was available for the asserted file.",
-      "remainingObligations": [
-        "Read the asserted file at the claim's repository revision."
-      ],
-      "limitations": [
-        "An exact resolved revision is required when the claim names one."
-      ]
-    },
-    {
-      "claimId": "claim_dependency_proof_justinwlin_convex-magic-link-authentication__auth_core",
-      "questionId": "question_dependency_proof",
-      "subject": {
-        "repo": "justinwlin/convex-magic-link-authentication"
-      },
-      "assertion": "package @auth/core is declared in file package.json",
-      "requiredObservationIds": [],
-      "status": "not_assessed",
-      "method": "dependency_declaration",
-      "assessorOrigin": "engine",
-      "evidencePolicyVersion": "phase2_claim_evidence_v2",
-      "rationale": "No same-repository, matching-revision observation was available for the asserted file.",
-      "remainingObligations": [
-        "Read the asserted file at the claim's repository revision."
-      ],
-      "limitations": [
-        "An exact resolved revision is required when the claim names one."
-      ]
-    },
-    {
-      "claimId": "claim_dependency_proof_justinwlin_convex-magic-link-authentication_resend",
-      "questionId": "question_dependency_proof",
-      "subject": {
-        "repo": "justinwlin/convex-magic-link-authentication"
-      },
-      "assertion": "package resend is declared in file package.json",
-      "requiredObservationIds": [],
-      "status": "not_assessed",
-      "method": "dependency_declaration",
-      "assessorOrigin": "engine",
-      "evidencePolicyVersion": "phase2_claim_evidence_v2",
-      "rationale": "No same-repository, matching-revision observation was available for the asserted file.",
-      "remainingObligations": [
-        "Read the asserted file at the claim's repository revision."
-      ],
-      "limitations": [
-        "An exact resolved revision is required when the claim names one."
-      ]
-    },
-    {
-      "claimId": "claim_server_auth_proof_headcodecms_headcodecms",
-      "questionId": "question_server_auth_proof",
-      "subject": {
-        "repo": "headcodecms/headcodecms",
-        "revision": "0123456789abcdef0123456789abcdef01234567"
-      },
-      "assertion": "source convex/auth.ts states: \"convexAuth\", \"Resend\"",
-      "requiredObservationIds": [
-        "obs_headcodecms_headcodecms_2"
-      ],
-      "status": "supported",
-      "method": "exact_source_quotation",
-      "assessorOrigin": "engine",
-      "evidenceOrigin": "synthetic",
-      "evidencePolicyVersion": "phase2_claim_evidence_v2",
-      "rationale": "One same-subject source observation from the requested path contains every required quotation signal.",
-      "remainingObligations": [],
-      "limitations": [
-        "Supports only that the source states the quoted text.",
-        "Synthetic fixture observation; not a live repository finding."
-      ]
-    },
-    {
-      "claimId": "claim_server_auth_proof_justinwlin_convex-magic-link-authentication",
-      "questionId": "question_server_auth_proof",
-      "subject": {
-        "repo": "justinwlin/convex-magic-link-authentication"
-      },
-      "assertion": "source <path> states: \"convexAuth\", \"Resend\"",
-      "requiredObservationIds": [
-        "obs_justinwlin_convex-magic-link-authentication_1"
-      ],
-      "status": "unsupported",
-      "method": "exact_source_quotation",
-      "assessorOrigin": "engine",
-      "evidenceOrigin": "synthetic",
-      "evidencePolicyVersion": "phase2_claim_evidence_v2",
-      "rationale": "The same-subject observations did not pass the Phase 1 exact quotation policy for this assertion.",
-      "remainingObligations": [
-        "Retrieve and validate a same-subject exact source quotation."
-      ],
-      "limitations": [
-        "Synthetic fixture observation; not a live repository finding."
-      ]
-    },
-    {
-      "claimId": "claim_client_flow_proof_headcodecms_headcodecms",
-      "questionId": "question_client_flow_proof",
-      "subject": {
-        "repo": "headcodecms/headcodecms",
-        "revision": "0123456789abcdef0123456789abcdef01234567"
-      },
-      "assertion": "source app/(admin)/admin/login/page.tsx states: \"useAuthActions\", \"signIn('resend'\", \"signIn(\"resend\"\"",
+      "assertion": "source <path> states: \"Next.js\"",
       "requiredObservationIds": [
         "obs_headcodecms_headcodecms_1",
         "obs_headcodecms_headcodecms_2",
@@ -692,12 +452,110 @@
       ]
     },
     {
-      "claimId": "claim_client_flow_proof_justinwlin_convex-magic-link-authentication",
-      "questionId": "question_client_flow_proof",
-      "subject": {
-        "repo": "justinwlin/convex-magic-link-authentication"
+      "claimId": "claim_q1_0_1_quotation_headcodecms_headcodecms",
+      "questionId": "q1",
+      "fact": {
+        "questionId": "q1",
+        "obligationIndex": 0,
+        "factIndex": 1,
+        "kind": "quotation"
       },
-      "assertion": "source <path> states: \"useAuthActions\", \"signIn('resend'\", \"signIn(\"resend\"\"",
+      "subject": {
+        "repo": "headcodecms/headcodecms",
+        "revision": "0123456789abcdef0123456789abcdef01234567"
+      },
+      "assertion": "source <path> states: \"Next\"",
+      "requiredObservationIds": [
+        "obs_headcodecms_headcodecms_4"
+      ],
+      "status": "supported",
+      "method": "exact_source_quotation",
+      "assessorOrigin": "engine",
+      "evidenceOrigin": "synthetic",
+      "evidencePolicyVersion": "phase2_claim_evidence_v2",
+      "rationale": "One same-subject source observation from the requested path contains every required quotation signal.",
+      "remainingObligations": [],
+      "limitations": [
+        "Supports only that the source states the quoted text.",
+        "Synthetic fixture observation; not a live repository finding."
+      ]
+    },
+    {
+      "claimId": "claim_q1_0_2_quotation_headcodecms_headcodecms",
+      "questionId": "q1",
+      "fact": {
+        "questionId": "q1",
+        "obligationIndex": 0,
+        "factIndex": 2,
+        "kind": "quotation"
+      },
+      "subject": {
+        "repo": "headcodecms/headcodecms",
+        "revision": "0123456789abcdef0123456789abcdef01234567"
+      },
+      "assertion": "source <path> states: \"Convex\"",
+      "requiredObservationIds": [
+        "obs_headcodecms_headcodecms_1",
+        "obs_headcodecms_headcodecms_2",
+        "obs_headcodecms_headcodecms_3",
+        "obs_headcodecms_headcodecms_4"
+      ],
+      "status": "unsupported",
+      "method": "exact_source_quotation",
+      "assessorOrigin": "engine",
+      "evidenceOrigin": "synthetic",
+      "evidencePolicyVersion": "phase2_claim_evidence_v2",
+      "rationale": "The same-subject observations did not pass the Phase 1 exact quotation policy for this assertion.",
+      "remainingObligations": [
+        "Retrieve and validate a same-subject exact source quotation."
+      ],
+      "limitations": [
+        "Synthetic fixture observation; not a live repository finding."
+      ]
+    },
+    {
+      "claimId": "claim_q1_0_3_quotation_headcodecms_headcodecms",
+      "questionId": "q1",
+      "fact": {
+        "questionId": "q1",
+        "obligationIndex": 0,
+        "factIndex": 3,
+        "kind": "quotation"
+      },
+      "subject": {
+        "repo": "headcodecms/headcodecms",
+        "revision": "0123456789abcdef0123456789abcdef01234567"
+      },
+      "assertion": "source <path> states: \"Resend\"",
+      "requiredObservationIds": [
+        "obs_headcodecms_headcodecms_2"
+      ],
+      "status": "supported",
+      "method": "exact_source_quotation",
+      "assessorOrigin": "engine",
+      "evidenceOrigin": "synthetic",
+      "evidencePolicyVersion": "phase2_claim_evidence_v2",
+      "rationale": "One same-subject source observation from the requested path contains every required quotation signal.",
+      "remainingObligations": [],
+      "limitations": [
+        "Supports only that the source states the quoted text.",
+        "Synthetic fixture observation; not a live repository finding."
+      ]
+    },
+    {
+      "claimId": "claim_q1_0_0_quotation_justinwlin_convex-magic-link-authentication",
+      "questionId": "q1",
+      "fact": {
+        "questionId": "q1",
+        "obligationIndex": 0,
+        "factIndex": 0,
+        "kind": "quotation"
+      },
+      "subject": {
+        "repo": "justinwlin/convex-magic-link-authentication",
+        "revision": "0123456789abcdef0123456789abcdef01234567"
+      },
+      "assertion": "source <path> states: \"Next.js\"",
       "requiredObservationIds": [
         "obs_justinwlin_convex-magic-link-authentication_1"
       ],
@@ -715,35 +573,79 @@
       ]
     },
     {
-      "claimId": "claim_route_protection_proof_headcodecms_headcodecms",
-      "questionId": "question_route_protection_proof",
+      "claimId": "claim_q1_0_1_quotation_justinwlin_convex-magic-link-authentication",
+      "questionId": "q1",
+      "fact": {
+        "questionId": "q1",
+        "obligationIndex": 0,
+        "factIndex": 1,
+        "kind": "quotation"
+      },
       "subject": {
-        "repo": "headcodecms/headcodecms",
+        "repo": "justinwlin/convex-magic-link-authentication",
         "revision": "0123456789abcdef0123456789abcdef01234567"
       },
-      "assertion": "source proxy.ts states: \"convexAuthNextjsMiddleware\", \"createRouteMatcher\"",
+      "assertion": "source <path> states: \"Next\"",
       "requiredObservationIds": [
-        "obs_headcodecms_headcodecms_4"
+        "obs_justinwlin_convex-magic-link-authentication_1"
       ],
-      "status": "supported",
+      "status": "unsupported",
       "method": "exact_source_quotation",
       "assessorOrigin": "engine",
       "evidenceOrigin": "synthetic",
       "evidencePolicyVersion": "phase2_claim_evidence_v2",
-      "rationale": "One same-subject source observation from the requested path contains every required quotation signal.",
-      "remainingObligations": [],
+      "rationale": "The same-subject observations did not pass the Phase 1 exact quotation policy for this assertion.",
+      "remainingObligations": [
+        "Retrieve and validate a same-subject exact source quotation."
+      ],
       "limitations": [
-        "Supports only that the source states the quoted text.",
         "Synthetic fixture observation; not a live repository finding."
       ]
     },
     {
-      "claimId": "claim_route_protection_proof_justinwlin_convex-magic-link-authentication",
-      "questionId": "question_route_protection_proof",
-      "subject": {
-        "repo": "justinwlin/convex-magic-link-authentication"
+      "claimId": "claim_q1_0_2_quotation_justinwlin_convex-magic-link-authentication",
+      "questionId": "q1",
+      "fact": {
+        "questionId": "q1",
+        "obligationIndex": 0,
+        "factIndex": 2,
+        "kind": "quotation"
       },
-      "assertion": "source <path> states: \"convexAuthNextjsMiddleware\", \"createRouteMatcher\"",
+      "subject": {
+        "repo": "justinwlin/convex-magic-link-authentication",
+        "revision": "0123456789abcdef0123456789abcdef01234567"
+      },
+      "assertion": "source <path> states: \"Convex\"",
+      "requiredObservationIds": [
+        "obs_justinwlin_convex-magic-link-authentication_1"
+      ],
+      "status": "unsupported",
+      "method": "exact_source_quotation",
+      "assessorOrigin": "engine",
+      "evidenceOrigin": "synthetic",
+      "evidencePolicyVersion": "phase2_claim_evidence_v2",
+      "rationale": "The same-subject observations did not pass the Phase 1 exact quotation policy for this assertion.",
+      "remainingObligations": [
+        "Retrieve and validate a same-subject exact source quotation."
+      ],
+      "limitations": [
+        "Synthetic fixture observation; not a live repository finding."
+      ]
+    },
+    {
+      "claimId": "claim_q1_0_3_quotation_justinwlin_convex-magic-link-authentication",
+      "questionId": "q1",
+      "fact": {
+        "questionId": "q1",
+        "obligationIndex": 0,
+        "factIndex": 3,
+        "kind": "quotation"
+      },
+      "subject": {
+        "repo": "justinwlin/convex-magic-link-authentication",
+        "revision": "0123456789abcdef0123456789abcdef01234567"
+      },
+      "assertion": "source <path> states: \"Resend\"",
       "requiredObservationIds": [
         "obs_justinwlin_convex-magic-link-authentication_1"
       ],
@@ -763,55 +665,11 @@
   ],
   "coverage": [
     {
-      "questionId": "question_dependency_proof",
+      "questionId": "q1",
       "status": "satisfied",
       "supportedClaimIds": [
-        "claim_dependency_proof_headcodecms_headcodecms_next",
-        "claim_dependency_proof_headcodecms_headcodecms_convex",
-        "claim_dependency_proof_headcodecms_headcodecms__convex-dev_auth",
-        "claim_dependency_proof_headcodecms_headcodecms__auth_core",
-        "claim_dependency_proof_headcodecms_headcodecms_resend"
-      ],
-      "partialClaimIds": [],
-      "contradictedClaimIds": [],
-      "unsatisfiedObligations": [],
-      "uninspectedCandidates": [],
-      "unavailableSources": [],
-      "suggestedNextActions": []
-    },
-    {
-      "questionId": "question_server_auth_proof",
-      "status": "satisfied",
-      "supportedClaimIds": [
-        "claim_server_auth_proof_headcodecms_headcodecms"
-      ],
-      "partialClaimIds": [],
-      "contradictedClaimIds": [],
-      "unsatisfiedObligations": [],
-      "uninspectedCandidates": [],
-      "unavailableSources": [],
-      "suggestedNextActions": []
-    },
-    {
-      "questionId": "question_client_flow_proof",
-      "status": "unresolved",
-      "supportedClaimIds": [],
-      "partialClaimIds": [],
-      "contradictedClaimIds": [],
-      "unsatisfiedObligations": [
-        "Client login flow calls useAuthActions().signIn for email link."
-      ],
-      "uninspectedCandidates": [],
-      "unavailableSources": [],
-      "suggestedNextActions": [
-        "Inspect a relevant source for: Client login flow calls useAuthActions().signIn for email link."
-      ]
-    },
-    {
-      "questionId": "question_route_protection_proof",
-      "status": "satisfied",
-      "supportedClaimIds": [
-        "claim_route_protection_proof_headcodecms_headcodecms"
+        "claim_q1_0_1_quotation_headcodecms_headcodecms",
+        "claim_q1_0_3_quotation_headcodecms_headcodecms"
       ],
       "partialClaimIds": [],
       "contradictedClaimIds": [],
@@ -822,16 +680,15 @@
     }
   ],
   "outcome": {
-    "status": "partial",
+    "status": "complete",
     "reasons": [
-      "1 required question(s) remain unsatisfied.",
       "synthetic_evidence"
     ]
   },
   "candidateStates": [
     {
       "repo": "headcodecms/headcodecms",
-      "state": "ineligible"
+      "state": "eligible"
     },
     {
       "repo": "justinwlin/convex-magic-link-authentication",
@@ -845,13 +702,13 @@
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
-      "path": "app/(admin)/admin/login/page.tsx",
-      "startLine": 14,
-      "endLine": 14,
-      "matchText": "void signIn('resend', formData).then(() => setSent(true));",
-      "matchedSignal": "Resend",
-      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/app/(admin)/admin/login/page.tsx#L14",
-      "role": "server_auth_proof",
+      "path": "package.json",
+      "startLine": 5,
+      "endLine": 5,
+      "matchText": "\"next\": \"^15.0.0\",",
+      "matchedSignal": "Next",
+      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L5",
+      "role": "q1_0_1",
       "proofLevel": "partial",
       "evidencePolicyVersion": "phase1_exact_quotation_v1",
       "supportMethod": "exact_source_quotation"
@@ -861,13 +718,13 @@
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
-      "path": "app/(admin)/admin/login/page.tsx",
-      "startLine": 2,
-      "endLine": 2,
-      "matchText": "import { useAuthActions } from \"@convex-dev/auth/react\";",
-      "matchedSignal": "useAuthActions",
-      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/app/(admin)/admin/login/page.tsx#L2",
-      "role": "client_flow_proof",
+      "path": "package.json",
+      "startLine": 7,
+      "endLine": 7,
+      "matchText": "\"convex\": \"^1.17.0\",",
+      "matchedSignal": "Convex",
+      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L7",
+      "role": "q1_0_2",
       "proofLevel": "partial",
       "evidencePolicyVersion": "phase1_exact_quotation_v1",
       "supportMethod": "exact_source_quotation"
@@ -877,13 +734,13 @@
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
-      "path": "app/(admin)/admin/login/page.tsx",
-      "startLine": 14,
-      "endLine": 14,
-      "matchText": "void signIn('resend', formData).then(() => setSent(true));",
-      "matchedSignal": "signIn('resend'",
-      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/app/(admin)/admin/login/page.tsx#L14",
-      "role": "client_flow_proof",
+      "path": "package.json",
+      "startLine": 10,
+      "endLine": 10,
+      "matchText": "\"resend\": \"^4.0.0\"",
+      "matchedSignal": "Resend",
+      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L10",
+      "role": "q1_0_3",
       "proofLevel": "partial",
       "evidencePolicyVersion": "phase1_exact_quotation_v1",
       "supportMethod": "exact_source_quotation"
@@ -897,15 +754,15 @@
       "startLine": 1,
       "endLine": 1,
       "matchText": "import { convexAuth } from \"@convex-dev/auth/server\";",
-      "matchedSignal": "convexAuth",
+      "matchedSignal": "Convex",
       "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/convex/auth.ts#L1",
-      "role": "server_auth_proof",
+      "role": "q1_0_2",
       "proofLevel": "partial",
       "evidencePolicyVersion": "phase1_exact_quotation_v1",
       "supportMethod": "exact_source_quotation"
     },
     {
-      "id": "ev_headcodecms_headcodecms_7",
+      "id": "ev_headcodecms_headcodecms_6",
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
@@ -915,7 +772,23 @@
       "matchText": "import Resend from \"@auth/core/providers/resend\";",
       "matchedSignal": "Resend",
       "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/convex/auth.ts#L2",
-      "role": "server_auth_proof",
+      "role": "q1_0_3",
+      "proofLevel": "partial",
+      "evidencePolicyVersion": "phase1_exact_quotation_v1",
+      "supportMethod": "exact_source_quotation"
+    },
+    {
+      "id": "ev_headcodecms_headcodecms_8",
+      "provider": "mock",
+      "repo": "headcodecms/headcodecms",
+      "ref": "0123456789abcdef0123456789abcdef01234567",
+      "path": "app/(admin)/admin/login/page.tsx",
+      "startLine": 2,
+      "endLine": 2,
+      "matchText": "import { useAuthActions } from \"@convex-dev/auth/react\";",
+      "matchedSignal": "Convex",
+      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/app/(admin)/admin/login/page.tsx#L2",
+      "role": "q1_0_2",
       "proofLevel": "partial",
       "evidencePolicyVersion": "phase1_exact_quotation_v1",
       "supportMethod": "exact_source_quotation"
@@ -925,13 +798,13 @@
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
-      "path": "package.json",
-      "startLine": 5,
-      "endLine": 5,
-      "matchText": "\"next\": \"^15.0.0\",",
-      "matchedSignal": "next",
-      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L5",
-      "role": "dependency_proof",
+      "path": "app/(admin)/admin/login/page.tsx",
+      "startLine": 14,
+      "endLine": 14,
+      "matchText": "void signIn('resend', formData).then(() => setSent(true));",
+      "matchedSignal": "Resend",
+      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/app/(admin)/admin/login/page.tsx#L14",
+      "role": "q1_0_3",
       "proofLevel": "partial",
       "evidencePolicyVersion": "phase1_exact_quotation_v1",
       "supportMethod": "exact_source_quotation"
@@ -941,109 +814,13 @@
       "provider": "mock",
       "repo": "headcodecms/headcodecms",
       "ref": "0123456789abcdef0123456789abcdef01234567",
-      "path": "package.json",
-      "startLine": 7,
-      "endLine": 7,
-      "matchText": "\"convex\": \"^1.17.0\",",
-      "matchedSignal": "convex",
-      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L7",
-      "role": "dependency_proof",
-      "proofLevel": "partial",
-      "evidencePolicyVersion": "phase1_exact_quotation_v1",
-      "supportMethod": "exact_source_quotation"
-    },
-    {
-      "id": "ev_headcodecms_headcodecms_12",
-      "provider": "mock",
-      "repo": "headcodecms/headcodecms",
-      "ref": "0123456789abcdef0123456789abcdef01234567",
-      "path": "package.json",
-      "startLine": 8,
-      "endLine": 8,
-      "matchText": "\"@convex-dev/auth\": \"^0.0.81\",",
-      "matchedSignal": "@convex-dev/auth",
-      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L8",
-      "role": "dependency_proof",
-      "proofLevel": "partial",
-      "evidencePolicyVersion": "phase1_exact_quotation_v1",
-      "supportMethod": "exact_source_quotation"
-    },
-    {
-      "id": "ev_headcodecms_headcodecms_13",
-      "provider": "mock",
-      "repo": "headcodecms/headcodecms",
-      "ref": "0123456789abcdef0123456789abcdef01234567",
-      "path": "package.json",
-      "startLine": 9,
-      "endLine": 9,
-      "matchText": "\"@auth/core\": \"^0.37.0\",",
-      "matchedSignal": "@auth/core",
-      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L9",
-      "role": "dependency_proof",
-      "proofLevel": "partial",
-      "evidencePolicyVersion": "phase1_exact_quotation_v1",
-      "supportMethod": "exact_source_quotation"
-    },
-    {
-      "id": "ev_headcodecms_headcodecms_14",
-      "provider": "mock",
-      "repo": "headcodecms/headcodecms",
-      "ref": "0123456789abcdef0123456789abcdef01234567",
-      "path": "package.json",
-      "startLine": 10,
-      "endLine": 10,
-      "matchText": "\"resend\": \"^4.0.0\"",
-      "matchedSignal": "resend",
-      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/package.json#L10",
-      "role": "dependency_proof",
-      "proofLevel": "partial",
-      "evidencePolicyVersion": "phase1_exact_quotation_v1",
-      "supportMethod": "exact_source_quotation"
-    },
-    {
-      "id": "ev_headcodecms_headcodecms_15",
-      "provider": "mock",
-      "repo": "headcodecms/headcodecms",
-      "ref": "0123456789abcdef0123456789abcdef01234567",
       "path": "proxy.ts",
-      "startLine": 9,
-      "endLine": 9,
-      "matchText": "export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {",
-      "matchedSignal": "convexAuth",
-      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/proxy.ts#L9",
-      "role": "server_auth_proof",
-      "proofLevel": "partial",
-      "evidencePolicyVersion": "phase1_exact_quotation_v1",
-      "supportMethod": "exact_source_quotation"
-    },
-    {
-      "id": "ev_headcodecms_headcodecms_17",
-      "provider": "mock",
-      "repo": "headcodecms/headcodecms",
-      "ref": "0123456789abcdef0123456789abcdef01234567",
-      "path": "proxy.ts",
-      "startLine": 2,
-      "endLine": 2,
-      "matchText": "convexAuthNextjsMiddleware,",
-      "matchedSignal": "convexAuthNextjsMiddleware",
-      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/proxy.ts#L2",
-      "role": "route_protection_proof",
-      "proofLevel": "partial",
-      "evidencePolicyVersion": "phase1_exact_quotation_v1",
-      "supportMethod": "exact_source_quotation"
-    },
-    {
-      "id": "ev_headcodecms_headcodecms_19",
-      "provider": "mock",
-      "repo": "headcodecms/headcodecms",
-      "ref": "0123456789abcdef0123456789abcdef01234567",
-      "path": "proxy.ts",
-      "startLine": 3,
-      "endLine": 3,
-      "matchText": "createRouteMatcher,",
-      "matchedSignal": "createRouteMatcher",
-      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/proxy.ts#L3",
-      "role": "route_protection_proof",
+      "startLine": 5,
+      "endLine": 5,
+      "matchText": "} from \"@convex-dev/auth/nextjs/server\";",
+      "matchedSignal": "Convex",
+      "url": "https://github.com/headcodecms/headcodecms/blob/0123456789abcdef0123456789abcdef01234567/proxy.ts#L5",
+      "role": "q1_0_2",
       "proofLevel": "partial",
       "evidencePolicyVersion": "phase1_exact_quotation_v1",
       "supportMethod": "exact_source_quotation"
@@ -1054,12 +831,12 @@
       "repo": "justinwlin/convex-magic-link-authentication",
       "ref": "0123456789abcdef0123456789abcdef01234567",
       "path": "README.md",
-      "startLine": 3,
-      "endLine": 3,
-      "matchText": "A guide to setting up magic-link auth with Convex Auth and Resend.",
-      "matchedSignal": "Resend",
-      "url": "https://github.com/justinwlin/convex-magic-link-authentication/blob/0123456789abcdef0123456789abcdef01234567/README.md#L3",
-      "role": "docs_reference",
+      "startLine": 1,
+      "endLine": 1,
+      "matchText": "# Convex Magic Link Authentication",
+      "matchedSignal": "Convex",
+      "url": "https://github.com/justinwlin/convex-magic-link-authentication/blob/0123456789abcdef0123456789abcdef01234567/README.md#L1",
+      "role": "q1_0_2",
       "proofLevel": "partial",
       "evidencePolicyVersion": "phase1_exact_quotation_v1",
       "supportMethod": "exact_source_quotation"
@@ -1070,44 +847,12 @@
       "repo": "justinwlin/convex-magic-link-authentication",
       "ref": "0123456789abcdef0123456789abcdef01234567",
       "path": "README.md",
-      "startLine": 14,
-      "endLine": 14,
-      "matchText": "Then call useAuthActions().signIn(\"resend\", formData) from your login form.",
-      "matchedSignal": "useAuthActions",
-      "url": "https://github.com/justinwlin/convex-magic-link-authentication/blob/0123456789abcdef0123456789abcdef01234567/README.md#L14",
-      "role": "docs_reference",
-      "proofLevel": "partial",
-      "evidencePolicyVersion": "phase1_exact_quotation_v1",
-      "supportMethod": "exact_source_quotation"
-    },
-    {
-      "id": "ev_justinwlin_convex-magic-link-authentication_5",
-      "provider": "mock",
-      "repo": "justinwlin/convex-magic-link-authentication",
-      "ref": "0123456789abcdef0123456789abcdef01234567",
-      "path": "README.md",
-      "startLine": 14,
-      "endLine": 14,
-      "matchText": "Then call useAuthActions().signIn(\"resend\", formData) from your login form.",
-      "matchedSignal": "signIn",
-      "url": "https://github.com/justinwlin/convex-magic-link-authentication/blob/0123456789abcdef0123456789abcdef01234567/README.md#L14",
-      "role": "docs_reference",
-      "proofLevel": "partial",
-      "evidencePolicyVersion": "phase1_exact_quotation_v1",
-      "supportMethod": "exact_source_quotation"
-    },
-    {
-      "id": "ev_justinwlin_convex-magic-link-authentication_7",
-      "provider": "mock",
-      "repo": "justinwlin/convex-magic-link-authentication",
-      "ref": "0123456789abcdef0123456789abcdef01234567",
-      "path": "README.md",
-      "startLine": 14,
-      "endLine": 14,
-      "matchText": "Then call useAuthActions().signIn(\"resend\", formData) from your login form.",
-      "matchedSignal": "signIn(\"resend\"",
-      "url": "https://github.com/justinwlin/convex-magic-link-authentication/blob/0123456789abcdef0123456789abcdef01234567/README.md#L14",
-      "role": "docs_reference",
+      "startLine": 3,
+      "endLine": 3,
+      "matchText": "A guide to setting up magic-link auth with Convex Auth and Resend.",
+      "matchedSignal": "Resend",
+      "url": "https://github.com/justinwlin/convex-magic-link-authentication/blob/0123456789abcdef0123456789abcdef01234567/README.md#L3",
+      "role": "q1_0_3",
       "proofLevel": "partial",
       "evidencePolicyVersion": "phase1_exact_quotation_v1",
       "supportMethod": "exact_source_quotation"

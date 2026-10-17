@@ -4,14 +4,14 @@
  *
  *   npx tsx scripts/generate-golden-fixtures.ts
  *
- * Only run this after intentionally changing scoring/rendering behavior, and
- * review the fixture diff before committing.
+ * Only run this after intentionally changing assessment/rendering behavior,
+ * and review the fixture diff before committing.
  */
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { runResearch } from "../src/core/pipeline.js";
+import { runAnchors, runPipeline } from "../src/core/pipeline.js";
 import { writeArtifacts } from "../src/core/writeArtifacts.js";
 import { MockEvidenceProvider } from "../src/adapters/MockEvidenceProvider.js";
 
@@ -28,12 +28,13 @@ const fixtureDir = fileURLToPath(
 );
 
 const outDir = await mkdtemp(join(tmpdir(), "ro-golden-gen-"));
-const { run, evidence, pattern } = await runResearch({
+const run = await runPipeline({
   goal: GOLDEN_GOAL,
   provider: new MockEvidenceProvider(),
   deterministic: true,
 });
-await writeArtifacts(run, outDir, { evidence, pattern });
+const evidence = runAnchors(run);
+await writeArtifacts(run, outDir, { evidence });
 
 await mkdir(fixtureDir, { recursive: true });
 for (const [src, dest] of GOLDEN_FILES) {
@@ -41,4 +42,4 @@ for (const [src, dest] of GOLDEN_FILES) {
   await writeFile(join(fixtureDir, dest), content, "utf8");
   console.log(`${dest}: ${content.length} bytes`);
 }
-console.log(`run id: ${run.id}, anchors: ${evidence.length}`);
+console.log(`run id: ${run.id}, anchors: ${evidence.length}, outcome: ${run.outcome.status}`);

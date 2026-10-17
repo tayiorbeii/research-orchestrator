@@ -1,12 +1,14 @@
 // Library entrypoint for research-orchestrator.
 export * from "./schemas/index.js";
 export { normalizeFeatureSpec } from "./core/normalizeFeatureSpec.js";
-export { generateSearchProbes } from "./core/generateSearchProbes.js";
-export { collectEvidence } from "./core/collectEvidence.js";
+export { collectEvidence, proofTargetsFromFeatureSpec, type ProofTargets } from "./core/collectEvidence.js";
 export { scoreCandidate } from "./core/scoreCandidate.js";
 export { extractPattern, type ExtractedPattern } from "./core/extractPattern.js";
 export { writeArtifacts, type WriteArtifactsOptions } from "./core/writeArtifacts.js";
-export { runResearch, runPipeline, type RunResearchOptions, type RunResearchResult } from "./core/pipeline.js";
+export { runPipeline, runAnchors, type RunPipelineOptions } from "./core/pipeline.js";
+export { assessBriefClaims, briefFacts, claimIdFor } from "./core/assessment/claimLedger.js";
+export { deriveBriefReport, renderBriefResearchMd, renderBriefPlanMd, renderBriefChecklistMd, type BriefReport } from "./core/report/briefReport.js";
+export { proofTargetsFromBrief, briefFeatureSpec } from "./core/brief/proofTargets.js";
 export { validateBrief, type BriefIssue } from "./core/brief/validateBrief.js";
 export { draftBriefFromGoal } from "./core/brief/draftBriefFromGoal.js";
 export { compileProbes } from "./core/brief/compileProbes.js";

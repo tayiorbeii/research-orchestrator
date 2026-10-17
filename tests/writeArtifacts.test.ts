@@ -2,28 +2,26 @@ import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { runResearch, type RunResearchResult } from "../src/core/pipeline.js";
+import { runAnchors, runPipeline } from "../src/core/pipeline.js";
 import { writeArtifacts } from "../src/core/writeArtifacts.js";
 import { redactSecrets } from "../src/core/redact.js";
 import { MockEvidenceProvider } from "../src/adapters/MockEvidenceProvider.js";
+import type { ResearchRunV2 } from "../src/schemas/index.js";
 
 const GOAL = "Build a Next.js + Convex app with email magic links via Resend.";
 
 describe("writeArtifacts", () => {
   let outDir: string;
-  let result: RunResearchResult;
+  let run: ResearchRunV2;
 
   beforeAll(async () => {
     outDir = await mkdtemp(join(tmpdir(), "ro-artifacts-"));
-    result = await runResearch({
+    run = await runPipeline({
       goal: GOAL,
       provider: new MockEvidenceProvider(),
       deterministic: true,
     });
-    await writeArtifacts(result.run, outDir, {
-      evidence: result.evidence,
-      pattern: result.pattern,
-    });
+    await writeArtifacts(run, outDir, { evidence: runAnchors(run) });
   });
 
   afterAll(async () => {
@@ -55,8 +53,10 @@ describe("writeArtifacts", () => {
   it("research.md contains the required sections and evidence", async () => {
     const research = await readFile(join(outDir, "research.md"), "utf8");
     expect(research).toContain("Synthetic/mock evidence");
-    expect(research).toContain("Question coverage");
-    expect(research).toContain("Claim assessments");
+    expect(research).toContain("## Findings by question");
+    expect(research).toContain("## What was searched");
+    expect(research).toContain("## Budget receipt");
+    expect(research).toContain("`convex/auth.ts`");
     expect(research).not.toContain("**Server flow**");
     expect(research).not.toContain("implementation file");
   });
@@ -73,10 +73,11 @@ describe("writeArtifacts", () => {
     }
   });
 
-  it("plan.md includes steps, env var names, and references", async () => {
+  it("plan.md includes what the evidence supports, gaps, and references", async () => {
     const plan = await readFile(join(outDir, "plan.md"), "utf8");
-    expect(plan).toContain("Source quotations establish only what a source states");
-    expect(plan).toContain("No implementation steps are established");
+    expect(plan).toContain("## What the evidence supports");
+    expect(plan).toContain("## Gaps");
+    expect(plan).toContain("## Verification steps");
     expect(plan).not.toContain("AUTH_RESEND_KEY");
     expect(plan).toContain("## References");
     expect(plan).toContain("github.com/headcodecms/headcodecms");
@@ -92,15 +93,16 @@ describe("writeArtifacts", () => {
   });
 
   it("is deterministic for mock runs", async () => {
-    const again = await runResearch({
+    const again = await runPipeline({
       goal: GOAL,
       provider: new MockEvidenceProvider(),
       deterministic: true,
     });
-    expect(again.run.id).toBe(result.run.id);
-    expect(again.run.createdAt).toBe(result.run.createdAt);
-    expect(again.run.scoredCandidates).toEqual(result.run.scoredCandidates);
-    expect(again.evidence).toEqual(result.evidence);
+    expect(again.id).toBe(run.id);
+    expect(again.createdAt).toBe(run.createdAt);
+    expect(again.assessments).toEqual(run.assessments);
+    expect(again.coverage).toEqual(run.coverage);
+    expect(runAnchors(again)).toEqual(runAnchors(run));
   });
 });
 

@@ -3,16 +3,15 @@ import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { runResearch } from "../src/core/pipeline.js";
+import { runAnchors, runPipeline } from "../src/core/pipeline.js";
 import { writeArtifacts } from "../src/core/writeArtifacts.js";
 import { MockEvidenceProvider } from "../src/adapters/MockEvidenceProvider.js";
 
 /**
  * Golden-snapshot regression fixtures (docs/10_eval_benchmarks.md,
- * "Regression tests"): the deterministic mock run must regenerate artifacts
- * byte-identical to tests/fixtures/next-convex-magic-link/. Phase 2 records
- * observations, scoped claim assessments, coverage, and run outcome alongside
- * the compatibility anchor projection.
+ * "Regression tests"): the deterministic mock goal run — drafted into a brief
+ * and executed on the one brief path — must regenerate artifacts
+ * byte-identical to tests/fixtures/next-convex-magic-link/.
  *
  * To intentionally update the snapshots after reviewing the diff:
  *   npx tsx scripts/generate-golden-fixtures.ts
@@ -29,12 +28,12 @@ const FILES: ReadonlyArray<readonly [string, string]> = [
 describe("golden mock artifacts (docs/10 regression tests)", () => {
   it("regenerates artifacts byte-identical to the golden snapshots", async () => {
     const outDir = await mkdtemp(join(tmpdir(), "ro-golden-"));
-    const { run, evidence, pattern } = await runResearch({
+    const run = await runPipeline({
       goal: GOAL,
       provider: new MockEvidenceProvider(),
       deterministic: true,
     });
-    await writeArtifacts(run, outDir, { evidence, pattern });
+    await writeArtifacts(run, outDir, { evidence: runAnchors(run) });
 
     for (const [actualName, expectedName] of FILES) {
       const actual = await readFile(join(outDir, actualName), "utf8");
@@ -61,15 +60,17 @@ describe("golden mock artifacts (docs/10 regression tests)", () => {
     expect(parsed.runId).toBe("run_mock_next_convex_magic_link_auth");
     expect(parsed.createdAt).toBe("2026-06-30T00:00:00.000Z");
     expect(parsed.selectedRepos).toEqual(["headcodecms/headcodecms"]);
-    expect(parsed.evidence).toHaveLength(17);
+    expect(parsed.evidence).toHaveLength(10);
     expect(parsed.evidence.filter((a) => a.proofLevel === "proved")).toHaveLength(0);
-    expect(parsed.evidence.filter((a) => a.supportMethod === "exact_source_quotation")).toHaveLength(17);
+    expect(parsed.evidence.filter((a) => a.supportMethod === "exact_source_quotation")).toHaveLength(10);
     expect(parsed.schemaVersion).toBe(2);
     expect(parsed.evidencePolicyVersion).toBe("phase2_claim_evidence_v2");
-    expect(parsed.observations.length).toBeGreaterThan(0);
-    expect(parsed.assessments.some((item) => item.status === "supported" && item.assessorOrigin === "engine" && item.evidenceOrigin === "synthetic" && item.subject.repo === "headcodecms/headcodecms" && item.assertion.startsWith("package "))).toBe(true);
+    expect(parsed.observations.length).toBe(5);
+    // Claims exist only for the two repositories that were read; one goal term is supported from source.
+    expect(parsed.assessments).toHaveLength(8);
+    expect(parsed.assessments.some((item) => item.status === "supported" && item.assessorOrigin === "engine" && item.evidenceOrigin === "synthetic" && item.subject.repo === "headcodecms/headcodecms" && item.assertion.includes('"Resend"'))).toBe(true);
     expect(parsed.coverage.length).toBeGreaterThan(0);
-    expect(parsed.outcome.status).toBe("partial");
+    expect(parsed.outcome.status).toBe("complete");
     expect(parsed.outcome.reasons).toContain("synthetic_evidence");
     expect(parsed.evidenceOrigin).toBe("synthetic_mock");
     // Redaction is enforced on every artifact write: the mock fixture's fake

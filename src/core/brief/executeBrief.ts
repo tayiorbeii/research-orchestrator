@@ -42,6 +42,9 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
   }
   const now = deps.now ?? (() => new Date());
   const createdAt = deps.deterministic ? DEFAULT_TIME : now().toISOString();
+  // Deadline checks always use the real clock; a deterministic run only
+  // reports fixed timestamps and zero durations so its artifacts are stable.
+  const elapsedSince = (started: number) => deps.deterministic ? 0 : Math.max(0, Date.now() - started);
   const ledger: BudgetLedger = {
     limits: { ...brief.budgets },
     consumed: deps.resumeLedger ? {
@@ -126,12 +129,12 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
       results.push(...found);
       const resultIds = found.map((result) => `${result.repo}:${result.path}`);
       const truncated = found.some((result) => result.truncated);
-      outcomes.push({ probeId: probe.id, status: "succeeded", resultClass: truncated ? "pagination_limit" : found.length === 0 ? "empty" : "relevant_leads", basis: truncated ? `Provider marked results incomplete (${found.length} lead(s) returned).` : found.length === 0 ? "Provider returned zero results for this query." : `Provider returned ${found.length} result(s).`, ...(truncated ? { truncated: true } : {}), resultIds, queryUnits: 1, requestCount, durationMs: Date.now() - started, predecessorProbeIds: probe.predecessorProbeIds });
+      outcomes.push({ probeId: probe.id, status: "succeeded", resultClass: truncated ? "pagination_limit" : found.length === 0 ? "empty" : "relevant_leads", basis: truncated ? `Provider marked results incomplete (${found.length} lead(s) returned).` : found.length === 0 ? "Provider returned zero results for this query." : `Provider returned ${found.length} result(s).`, ...(truncated ? { truncated: true } : {}), resultIds, queryUnits: 1, requestCount, durationMs: elapsedSince(started), predecessorProbeIds: probe.predecessorProbeIds });
     } catch (error) {
       ledger.consumed.queryUnits += 1;
       ledger.consumed.rpcCount += 1;
       const failureKind = error && typeof error === "object" && "code" in error && (error as { code?: string }).code === "access_denied" ? "access_denied" as const : "transport_failure" as const;
-      outcomes.push({ probeId: probe.id, status: "failed", errorClass: error instanceof Error ? error.name : "ProviderError", failureKind, reason: error instanceof Error ? error.message : String(error), resultIds: [], queryUnits: 1, requestCount: 1, durationMs: Date.now() - started, predecessorProbeIds: probe.predecessorProbeIds });
+      outcomes.push({ probeId: probe.id, status: "failed", errorClass: error instanceof Error ? error.name : "ProviderError", failureKind, reason: error instanceof Error ? error.message : String(error), resultIds: [], queryUnits: 1, requestCount: 1, durationMs: elapsedSince(started), predecessorProbeIds: probe.predecessorProbeIds });
       warnings.push(`Probe ${probe.id} failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
@@ -174,14 +177,14 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
           ledger.consumed.rpcCount += 1;
           ledger.consumed.refinementProbes += 1;
           results.push(...found);
-          outcomes.push({ probeId: probe.id, status: "succeeded", resultClass: found.some((result) => result.truncated) ? "pagination_limit" : found.length ? "relevant_leads" : "empty", basis: found.length ? `Refined provider query returned ${found.length} lead(s).` : "Refined provider query returned zero results.", ...(found.some((result) => result.truncated) ? { truncated: true } : {}), resultIds: found.map((result) => `${result.repo}:${result.path}`), queryUnits: 1, requestCount: 1, durationMs: Math.max(0, now().getTime() - started), predecessorProbeIds: probe.predecessorProbeIds });
+          outcomes.push({ probeId: probe.id, status: "succeeded", resultClass: found.some((result) => result.truncated) ? "pagination_limit" : found.length ? "relevant_leads" : "empty", basis: found.length ? `Refined provider query returned ${found.length} lead(s).` : "Refined provider query returned zero results.", ...(found.some((result) => result.truncated) ? { truncated: true } : {}), resultIds: found.map((result) => `${result.repo}:${result.path}`), queryUnits: 1, requestCount: 1, durationMs: elapsedSince(started), predecessorProbeIds: probe.predecessorProbeIds });
           scheduled.push(probe);
         } catch (error) {
           ledger.consumed.queryUnits += 1;
           ledger.consumed.rpcCount += 1;
           ledger.consumed.refinementProbes += 1;
           const failureKind = error && typeof error === "object" && "code" in error && (error as { code?: string }).code === "access_denied" ? "access_denied" as const : "transport_failure" as const;
-          outcomes.push({ probeId: probe.id, status: "failed", failureKind, errorClass: error instanceof Error ? error.name : "ProviderError", reason: error instanceof Error ? error.message : String(error), resultIds: [], queryUnits: 1, requestCount: 1, durationMs: Math.max(0, now().getTime() - started), predecessorProbeIds: probe.predecessorProbeIds });
+          outcomes.push({ probeId: probe.id, status: "failed", failureKind, errorClass: error instanceof Error ? error.name : "ProviderError", reason: error instanceof Error ? error.message : String(error), resultIds: [], queryUnits: 1, requestCount: 1, durationMs: elapsedSince(started), predecessorProbeIds: probe.predecessorProbeIds });
         }
       }
     }
@@ -348,7 +351,11 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
     const eligible = brief.questions.filter((question) => question.required).every((question) => question.obligations.every((obligation, obligationIndex) => obligationSatisfied(question.id, obligation, obligationIndex, [candidate.repo], assessments)));
     return { repo: candidate.repo, state: eligible ? "eligible" as const : inspected ? "ineligible" as const : "uninspected" as const, ...(brief.seeds.some((seed) => seed.repo === candidate.repo) ? { reason: `Caller supplied seed (${brief.seeds.find((seed) => seed.repo === candidate.repo)!.origin}); no proof credit without source assessment.` } : {}) };
   });
-  ledger.elapsedMs = (deps.resumeLedger?.elapsedMs ?? 0) + Math.max(0, now().getTime() - Date.parse(ledger.startedAt ?? createdAt));
+  ledger.elapsedMs = (deps.resumeLedger?.elapsedMs ?? 0) + (deps.deterministic ? 0 : Math.max(0, now().getTime() - Date.parse(ledger.startedAt ?? createdAt)));
+  if (deps.deterministic) {
+    ledger.startedAt = DEFAULT_TIME;
+    ledger.deadlineAt = new Date(Date.parse(DEFAULT_TIME) + brief.budgets.deadlineMs).toISOString();
+  }
   const untouchedQuestions = coverage.filter((item) => brief.questions.find((question) => question.id === item.questionId)?.required && item.status !== "satisfied").map((item) => ({ questionId: item.questionId, reason: item.status === "not_attempted" ? "No probe or source read was attempted." : "The question was attempted but remains unresolved." }));
   const untouchedRepos = candidates.filter((candidate) => {
     const repoObservations = observations.filter((observation) => observation.repo === candidate.repo);

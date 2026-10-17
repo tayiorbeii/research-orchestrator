@@ -19,19 +19,6 @@ export function questionsFromFeatureSpec(spec: FeatureSpec): RequiredQuestion[] 
   }));
 }
 
-/** Build independent claims; each claim is bound to exactly one candidate repository. */
-export function candidateClaims(
-  spec: FeatureSpec,
-  repos: readonly string[],
-): ClaimSpec[] {
-  return questionsFromFeatureSpec(spec).flatMap((question) => repos.map((repo) => ({
-    claimId: `claim_${question.requirementKey}_${repo.replace(/[^a-zA-Z0-9_-]/g, "_")}`,
-    questionId: question.questionId,
-    subject: { repo },
-    assertion: question.statement,
-  })));
-}
-
 /** Pure coverage/outcome derivation from persisted candidate and evidence state. */
 export function deriveCoverage(input: {
   spec: FeatureSpec;

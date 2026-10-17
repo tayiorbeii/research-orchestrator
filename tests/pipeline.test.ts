@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runResearch } from "../src/core/pipeline.js";
+import { runAnchors, runPipeline } from "../src/core/pipeline.js";
 import { MockEvidenceProvider } from "../src/adapters/MockEvidenceProvider.js";
 import { OctocodeEvidenceProvider } from "../src/adapters/OctocodeEvidenceProvider.js";
 import { GitHubEvidenceProvider } from "../src/adapters/GitHubEvidenceProvider.js";
@@ -14,57 +14,59 @@ import { createServer } from "../src/mcp/server.js";
 
 const GOAL = "Build a Next.js + Convex app with email magic links via Resend.";
 
-describe("runResearch (mock vertical slice)", () => {
-  it("runs goal -> spec -> probes -> candidates -> scores -> selection", async () => {
-    const { run, evidence } = await runResearch({
+describe("runPipeline (mock goal adapter)", () => {
+  it("drafts a brief from the goal and proves candidates through the claim ledger", async () => {
+    const run = await runPipeline({
       goal: GOAL,
       provider: new MockEvidenceProvider(),
       deterministic: true,
     });
 
     expect(() => ResearchRunSchema.parse(run)).not.toThrow();
+    expect(() => ResearchRunV2Schema.parse(run)).not.toThrow();
     expect(run.featureSpec.featureKey).toBe("next-convex-magic-link-auth");
-    expect(run.probes.length).toBeGreaterThanOrEqual(4);
+    // Goal words are alternative leads: one fact each under an "any" obligation.
+    expect(run.brief?.questions[0]?.obligations[0]?.combine).toBe("any");
+    expect(run.probesV2?.length).toBeGreaterThanOrEqual(1);
     expect(run.candidates.length).toBe(2);
-
-    const production = run.scoredCandidates.find((s) => s.repo === "headcodecms/headcodecms");
-    // Exact quotes cannot establish working application behavior or production readiness.
-    expect(production?.class).toBe("reference");
-    expect(production?.nextAction).not.toBe("extract");
+    expect(run.scoredCandidates).toEqual([]);
     expect(run.selectedRepos).toContain("headcodecms/headcodecms");
+    expect(run.outcome.status).toBe("complete");
 
-    // Accepted repos must carry exact evidence anchors (>= 3).
+    // Selected repos must carry exact evidence anchors (>= 3).
+    const evidence = runAnchors(run);
     for (const repo of run.selectedRepos) {
       const anchors = evidence.filter((a) => a.repo === repo && a.supportMethod === "exact_source_quotation");
       expect(anchors.length, `quoted source observations for ${repo}`).toBeGreaterThanOrEqual(3);
     }
   });
 
-  it("documents missing proof instead of guessing", async () => {
-    const { run } = await runResearch({
+  it("reports an unread candidate instead of guessing about it", async () => {
+    const run = await runPipeline({
       goal: GOAL,
       provider: new MockEvidenceProvider(),
       deterministic: true,
       maxReposToProve: 1,
     });
-    expect(run.warnings.some((w) => w.includes("missingProof"))).toBe(true);
-    const unproved = run.scoredCandidates.find(
-      (s) => s.repo === "justinwlin/convex-magic-link-authentication",
-    );
-    expect(unproved).toBeDefined();
-    expect(unproved!.class).not.toBe("production");
+    const unread = "justinwlin/convex-magic-link-authentication";
+    expect(run.candidates.map((candidate) => candidate.repo)).toContain(unread);
+    expect(run.candidateStates.find((state) => state.repo === unread)?.state).toBe("uninspected");
+    expect(run.coverage[0]?.uninspectedCandidates).toContain(unread);
+    // No claim is minted for a repository nobody read.
+    expect(run.assessments.some((assessment) => assessment.subject.repo === unread)).toBe(false);
   });
 
-  it("supports a server-auth quotation only from one same-path observation and labels mock support synthetic", async () => {
-    const { run } = await runResearch({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
-    const claim = run.assessments.find((item) => item.questionId === "question_server_auth_proof" && item.subject.repo === "headcodecms/headcodecms");
-    expect(claim).toMatchObject({ status: "supported", evidenceOrigin: "synthetic", method: "exact_source_quotation" });
-    expect(claim?.assertion).toBe('source convex/auth.ts states: "convexAuth", "Resend"');
+  it("supports a goal-term quotation from one same-path observation and labels mock support synthetic", async () => {
+    const run = await runPipeline({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
+    const claim = run.assessments.find((item) => item.status === "supported" && item.subject.repo === "headcodecms/headcodecms");
+    expect(claim).toMatchObject({ status: "supported", evidenceOrigin: "synthetic", method: "exact_source_quotation", fact: { questionId: "q1", kind: "quotation" } });
     expect(claim?.requiredObservationIds).toHaveLength(1);
+    const observation = run.observations.find((item) => item.id === claim?.requiredObservationIds[0]);
+    expect(observation).toMatchObject({ repo: "headcodecms/headcodecms", kind: "repository_file", origin: "synthetic" });
   });
 
   it("requires outcomes and the budget ledger when a v2 run carries a brief", async () => {
-    const { run } = await runResearch({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
+    const run = await runPipeline({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
     const brief = {
       id: "brief-1", revision: 1, goal: GOAL,
       questions: [{ id: "q1", statement: "Find an example", intentHints: ["implementation_behavior"], required: true,
@@ -77,7 +79,7 @@ describe("runResearch (mock vertical slice)", () => {
       consumed: { queryUnits: 0, rpcCount: 0, reconnaissanceReads: 0, fileReads: 0, fileReadsByRepo: {}, refinementRounds: 0, refinementProbes: 0 }, cancelled: false,
     };
     expect(ResearchRunV2Schema.safeParse({ ...run, brief, probeOutcomes: [], budgetLedger }).success).toBe(true);
-    expect(ResearchRunV2Schema.safeParse({ ...run, brief, probeOutcomes: [] }).success).toBe(false);
+    expect(ResearchRunV2Schema.safeParse({ ...run, brief, probeOutcomes: [], budgetLedger: undefined }).success).toBe(false);
   });
 
   it("declares adapter search capabilities from the queries each adapter sends", () => {
@@ -115,8 +117,7 @@ describe("provider stubs (milestone 2)", () => {
     await expect(
       explainer.explain({
         repo: { repo: "owner/repo" },
-        feature: (await runResearch({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true })).run
-          .featureSpec,
+        feature: (await runPipeline({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true })).featureSpec,
         questions: ["Where is the provider configured?"],
       }),
     ).rejects.toMatchObject({ code: "provider_not_configured" });

@@ -17,7 +17,6 @@ import type {
 } from "../src/adapters/EvidenceProvider.js";
 import { collectEvidence, lineHasSignal } from "../src/core/collectEvidence.js";
 import { extractPattern } from "../src/core/extractPattern.js";
-import { generateSearchProbes } from "../src/core/generateSearchProbes.js";
 import { normalizeFeatureSpec } from "../src/core/normalizeFeatureSpec.js";
 import { getMissingRequiredProof } from "../src/core/scoreCandidate.js";
 import { deriveRunStatus } from "../src/core/writeArtifacts.js";
@@ -102,12 +101,6 @@ describe("research intent and entity preservation", () => {
     const existence = spec.proofRequirements.find((req) => req.key === "existence_proof");
     expect(existence?.signals).toContain("stripe");
     expect(existence?.signals).not.toContain("flowdeck");
-
-    const repoQueries = generateSearchProbes(spec)
-      .filter((probe) => probe.kind === "repo_search")
-      .map((probe) => probe.query.toLowerCase());
-    expect(repoQueries).toContain("stripe");
-    expect(repoQueries).not.toContain("flowdeck");
   });
 
   it("keeps technology comparisons research-shaped instead of applying app profiles", () => {
@@ -308,15 +301,6 @@ describe("research proof collection", () => {
     expect(
       anchors.some((anchor) => anchor.role === "behavior_proof" && anchor.proofLevel === "proved"),
     ).toBe(false);
-  });
-
-  it("does not generate standalone repo probes from introductory goal wording", () => {
-    const probes = generateSearchProbes(normalizeFeatureSpec(historicalGoal.goal));
-    const genericGoalTerms = new Set(["proven", "repository", "implementations"]);
-    const taskLanguageOnlyProbes = probes.filter((probe) => probe.kind === "repo_search" &&
-      probe.query.toLowerCase().split(/\s+/).filter(Boolean).every((token) => genericGoalTerms.has(token)));
-
-    expect(taskLanguageOnlyProbes).toHaveLength(0);
   });
 
   it("recognizes common non-Node dependency manifests", async () => {

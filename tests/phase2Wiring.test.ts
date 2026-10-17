@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MockEvidenceProvider } from "../src/adapters/MockEvidenceProvider.js";
 import { FileResearchCache, ResearchCacheReadError } from "../src/cache/FileResearchCache.js";
-import { runResearch } from "../src/core/pipeline.js";
+import { runPipeline } from "../src/core/pipeline.js";
 import { writeArtifacts } from "../src/core/writeArtifacts.js";
 import { claimAssessorRegistry } from "../src/core/assessment/types.js";
 import { isExactQuotationSupport } from "../src/core/evidencePolicy.js";
@@ -38,7 +38,7 @@ describe("Phase 2 v2 wiring", () => {
           };
         }
       }
-      const { run } = await runResearch({ goal: GOAL, provider: new RangedProvider(), deterministic: true });
+      const run = await runPipeline({ goal: GOAL, provider: new RangedProvider(), deterministic: true });
       const source = run.observations[0]!;
       expect(source).toMatchObject({
         path: expect.any(String), requestedRevision: expect.any(String),
@@ -67,7 +67,7 @@ describe("Phase 2 v2 wiring", () => {
   it("marks redacted excerpts, rehashes stored text, and removes exact-quote status", async () => {
     const root = await mkdtemp(join(tmpdir(), "p2b2-redaction-"));
     try {
-      const { run } = await runResearch({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
+      const run = await runPipeline({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
       const source = run.observations.find((item) => item.excerpt?.includes("AUTH_RESEND_KEY="));
       expect(source).toBeDefined();
       const sourceLines = source!.excerpt!.split("\n");
@@ -115,7 +115,7 @@ describe("Phase 2 v2 wiring", () => {
   });
 
   it("records failed and unavailable source reads as observations", async () => {
-    const { run } = await runResearch({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
+    const run = await runPipeline({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
     const candidate = run.candidates[0]!;
     const failedProvider = {
       name: "mock",
@@ -135,7 +135,7 @@ describe("Phase 2 v2 wiring", () => {
   });
 
   it("stores bounded excerpts for large source reads with matching line ranges", async () => {
-    const { run } = await runResearch({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
+    const run = await runPipeline({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
     const candidate = { ...run.candidates[0]!, matchedPaths: ["src/large.ts"] };
     const signal = run.featureSpec.proofRequirements.find((requirement) => requirement.required && requirement.key !== "dependency_proof")?.signals[0] ?? "feature";
     const lines = Array.from({ length: 2_000 }, (_, index) => index === 1_000 ? `// ${signal}` : `// filler ${index}`);
@@ -157,7 +157,7 @@ describe("Phase 2 v2 wiring", () => {
     try {
       const cache = new FileResearchCache(root);
       await expect(cache.loadRun("missing")).rejects.toMatchObject({ code: "not_found" });
-      const { run } = await runResearch({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
+      const run = await runPipeline({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
       const savedPath = await cache.saveRun(run);
       const valid = await readFile(savedPath, "utf8");
       const { writeFile } = await import("node:fs/promises");
@@ -187,7 +187,7 @@ describe("Phase 2 v2 wiring", () => {
   it("keeps inline assessments external and excludes them from supported coverage", async () => {
     const root = await mkdtemp(join(tmpdir(), "p2b2-inline-"));
     try {
-      const { run } = await runResearch({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
+      const run = await runPipeline({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
       const first = run.assessments[0]!;
       const callerRun = {
         ...run,
@@ -212,7 +212,7 @@ describe("Phase 2 v2 wiring", () => {
   it("keeps a synthetic complete run visibly labeled when no other mock markers remain", async () => {
     const root = await mkdtemp(join(tmpdir(), "p2b2-synthetic-banner-"));
     try {
-      const { run } = await runResearch({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
+      const run = await runPipeline({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
       const syntheticCompleteRun = {
         ...run,
         evidenceOrigin: "repository_observation" as const,
@@ -242,7 +242,7 @@ describe("Phase 2 v2 wiring", () => {
   it("renders equivalent artifacts for inline and cached runs after normalization", async () => {
     const root = await mkdtemp(join(tmpdir(), "p2b2-equivalence-"));
     try {
-      const { run } = await runResearch({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
+      const run = await runPipeline({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
       const imported = downgradeInlineRun(run);
       const cache = new FileResearchCache(join(root, "cache"));
       await cache.saveRun(imported);
@@ -318,7 +318,9 @@ describe("Phase 2 v2 wiring", () => {
       remainingObligations: [], limitations: ["Does not establish runtime invocation."],
     });
     try {
-      const { run } = await runResearch({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true });
+      // A dependency fact routes to the dependency assessor; the goal path drafts quotation facts only.
+      const hints = { questions: [{ id: "q-dep", statement: "Is @convex-dev/auth declared?", intentHints: ["library_usage" as const], required: true, answerScope: "one example", obligations: [{ facts: [{ kind: "dependency" as const, packageName: "@convex-dev/auth" }], combine: "all" as const, scope: "same_repository" as const }] }] };
+      const run = await runPipeline({ goal: GOAL, provider: new MockEvidenceProvider(), deterministic: true, hints });
       const declaration = run.assessments.find((item) => item.method === "dependency_declaration");
       expect(declaration?.status).toBe("supported");
       expect(run.coverage.find((item) => item.questionId === declaration?.questionId)?.status).toBe("satisfied");

@@ -15,7 +15,7 @@ import {
   setOctocodeToolCaller,
 } from "../src/adapters/bridge.js";
 import { MOCK_FILE_CONTENTS } from "../src/adapters/MockEvidenceProvider.js";
-import { runResearch } from "../src/core/pipeline.js";
+import { runAnchors, runPipeline } from "../src/core/pipeline.js";
 import { findImplementations, resolveProvider } from "../src/mcp/tools/findImplementations.js";
 import type { SearchProbe } from "../src/schemas/index.js";
 
@@ -210,21 +210,20 @@ describe("Octocode normalization", () => {
 });
 
 describe("full pipeline against a fake Octocode caller", () => {
-  it("search -> metadata -> getFile -> anchors -> scoring proves the repo", async () => {
+  it("search -> metadata -> getFile -> anchors -> assessment proves the repo", async () => {
     const calls: RecordedCall[] = [];
     const provider = new OctocodeEvidenceProvider({ callTool: fakeOctocodeCaller(calls) });
     expect(provider.configured).toBe(true);
 
-    const { run, evidence } = await runResearch({ goal: GOAL, provider });
+    const run = await runPipeline({ goal: GOAL, provider });
+    const evidence = runAnchors(run);
 
     expect(run.candidates).toHaveLength(1);
     expect(run.candidates[0]!.repo).toBe(REPO);
     expect(run.candidates[0]!.matchedPaths.length).toBe(4);
 
-    const scored = run.scoredCandidates[0]!;
     // Source excerpts are observations, not implementation verification.
-    expect(scored.class).toBe("reference");
-    expect(scored.nextAction).not.toBe("extract");
+    expect(run.assessments.some((assessment) => assessment.status === "supported" && assessment.subject.repo === REPO)).toBe(true);
     expect(run.selectedRepos).toContain(REPO);
 
     const supported = evidence.filter((a) => a.supportMethod === "exact_source_quotation");
@@ -257,9 +256,10 @@ describe("full pipeline against a fake Octocode caller", () => {
       }
       return {};
     };
-    const { run } = await runResearch({ goal: GOAL, provider: new OctocodeEvidenceProvider({ callTool: caller }) });
+    const run = await runPipeline({ goal: GOAL, provider: new OctocodeEvidenceProvider({ callTool: caller }) });
     expect(run.warnings.some((w) => w.includes("missingProof") && w.includes("rate limited"))).toBe(true);
-    expect(run.scoredCandidates[0]!.class).not.toBe("production");
+    expect(run.selectedRepos).not.toContain(REPO);
+    expect(run.outcome.status).not.toBe("complete");
   });
 });
 
