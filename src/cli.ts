@@ -10,7 +10,7 @@ import { addLocalArtifactFingerprints } from "./core/brief/localArtifacts.js";
 import { writeArtifacts, deriveRunStatus } from "./core/writeArtifacts.js";
 import { MockEvidenceProvider } from "./adapters/MockEvidenceProvider.js";
 import { GitHubEvidenceProvider } from "./adapters/GitHubEvidenceProvider.js";
-import { resolveOctocodeProvider } from "./adapters/bridge.js";
+import { githubRevisionResolver, resolveOctocodeProvider } from "./adapters/bridge.js";
 import type { EvidenceProvider } from "./adapters/EvidenceProvider.js";
 import type { EvidenceAnchor, ResearchRunV2 } from "./schemas/index.js";
 import type { ExtractedPattern } from "./core/extractPattern.js";
@@ -383,7 +383,9 @@ async function resolveCliProvider(mode: string): Promise<EvidenceProvider> {
     case "octocode":
       // Wired via setOctocodeToolCaller() or RESEARCH_OCTOCODE_BRIDGE; fails
       // fast with a structured provider_not_configured error otherwise.
-      return resolveOctocodeProvider({ requireConfigured: true });
+      // Revisions are pinned through the GitHub token the bridge already
+      // needs, so observations bind to immutable commits.
+      return resolveOctocodeProvider({ requireConfigured: true, revisionResolver: githubRevisionResolver() });
     case "github": {
       const provider = new GitHubEvidenceProvider();
       if (!provider.configured) {

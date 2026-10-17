@@ -92,16 +92,16 @@ export async function collectEvidence(
   let pinnedRevision: string | undefined;
   let revisionLimitation: string | undefined;
   if (pathsToRead.some((read) => !/^issues\/\d+$/.test(read.path)) && provider.searchCapabilities?.().revisionPinning && provider.resolveRevision) {
-    if (!candidate.defaultBranch && provider.name !== "mock") {
-      revisionLimitation = "The repository default branch is unknown; no revision was fabricated.";
-    } else {
-      try {
-        const resolution = await provider.resolveRevision({ repo: candidate.repo, ref: candidate.defaultBranch });
-        if ("sha" in resolution && /^[a-f0-9]{40}$/i.test(resolution.sha)) pinnedRevision = resolution.sha;
-        else revisionLimitation = "The provider could not pin this repository revision; evidence may reflect a moving default branch.";
-      } catch {
-        revisionLimitation = "The provider could not pin this repository revision; evidence may reflect a moving default branch.";
-      }
+    // The resolver decides what it can pin: a missing default branch (search
+    // metadata rarely carries one) is its problem to look up or to report.
+    try {
+      const resolution = await provider.resolveRevision({ repo: candidate.repo, ref: candidate.defaultBranch });
+      if ("sha" in resolution && /^[a-f0-9]{40}$/i.test(resolution.sha)) pinnedRevision = resolution.sha;
+      else revisionLimitation = "unavailableReason" in resolution && resolution.unavailableReason
+        ? `The provider could not pin this repository revision (${resolution.unavailableReason}); evidence may reflect a moving default branch.`
+        : "The provider could not pin this repository revision; evidence may reflect a moving default branch.";
+    } catch {
+      revisionLimitation = "The provider could not pin this repository revision; evidence may reflect a moving default branch.";
     }
     if (revisionLimitation) warnings.push(`revision limitation: ${candidate.repo}: ${revisionLimitation}`);
   }

@@ -5,6 +5,8 @@ import {
   type OctocodeToolCaller,
 } from "./OctocodeEvidenceProvider.js";
 import { DeepWikiExplainer, type DeepWikiExplainerConfig } from "./DeepWikiExplainer.js";
+import { GitHubEvidenceProvider } from "./GitHubEvidenceProvider.js";
+import type { RepoRef, RevisionResolution } from "./EvidenceProvider.js";
 import { ResearchError, providerNotConfigured } from "../core/errors.js";
 
 /**
@@ -141,6 +143,8 @@ export interface ResolveOctocodeProviderOptions {
   maxResultsPerProbe?: number;
   /** Throw a structured provider_not_configured error when no bridge is found. */
   requireConfigured?: boolean;
+  /** Pin repositories to commit SHAs (see githubRevisionResolver); off by default. */
+  revisionResolver?: (input: RepoRef) => Promise<RevisionResolution>;
 }
 
 /**
@@ -168,11 +172,38 @@ export async function resolveOctocodeProvider(
   const provider = new OctocodeEvidenceProvider({
     callTool,
     maxResultsPerProbe: options.maxResultsPerProbe,
+    ...(options.revisionResolver ? { revisionResolver: options.revisionResolver } : {}),
   });
   if (options.requireConfigured && !provider.configured) {
     throw providerNotConfigured("Octocode", OCTOCODE_WIRING_HINT);
   }
   return provider;
+}
+
+/**
+ * Revision pinning for Octocode runs, composed from the GitHub REST provider.
+ * The token lookup (env or `gh auth token`) happens on first use, and an
+ * unconfigured GitHub provider answers with an unavailable reason rather than
+ * throwing, so a run without a token still proceeds — on a moving ref, which
+ * every assessment then says so.
+ */
+export function githubRevisionResolver(config: { github?: GitHubEvidenceProvider } = {}): (input: RepoRef) => Promise<RevisionResolution> {
+  let github: GitHubEvidenceProvider | undefined = config.github;
+  return async (input) => {
+    github ??= new GitHubEvidenceProvider();
+    if (!github.configured) return { unavailableReason: "No GitHub token is available to pin the revision (run `gh auth login` or set GITHUB_TOKEN)." };
+    let ref = input.ref;
+    if (!ref) {
+      // Search metadata seldom names the default branch; one metadata call does.
+      try {
+        ref = (await github.getRepoMetadata({ repo: input.repo })).defaultBranch;
+      } catch (error) {
+        return { unavailableReason: `GitHub metadata lookup failed: ${(error as Error).message}` };
+      }
+      if (!ref) return { unavailableReason: "The repository default branch is unknown; no revision was fabricated." };
+    }
+    return github.resolveRevision({ repo: input.repo, ref });
+  };
 }
 
 export interface ResolveDeepWikiExplainerOptions {

@@ -6,7 +6,7 @@ import { ResearchBriefSchema } from "../../schemas/researchBrief.js";
 import { providerNotConfigured, ResearchError } from "../../core/errors.js";
 import { MockEvidenceProvider } from "../../adapters/MockEvidenceProvider.js";
 import { GitHubEvidenceProvider } from "../../adapters/GitHubEvidenceProvider.js";
-import { resolveOctocodeProvider } from "../../adapters/bridge.js";
+import { githubRevisionResolver, resolveOctocodeProvider } from "../../adapters/bridge.js";
 import type { EvidenceProvider } from "../../adapters/EvidenceProvider.js";
 import { FileResearchCache } from "../../cache/FileResearchCache.js";
 import type { ResearchRunV2 } from "../../schemas/researchRun.js";
@@ -25,6 +25,7 @@ export const findImplementationsInputShape = {
   maxCandidates: z.number().int().positive().optional(),
   maxReposToProve: z.number().int().positive().optional(),
   mode: z.enum(["mock", "octocode", "github", "hybrid"]).optional().describe("Evidence provider mode; defaults to mock."),
+  pinRevisions: z.boolean().optional().describe("In octocode/hybrid mode, pin each repository to a commit SHA through the GitHub token so observations bind to immutable revisions."),
   deepwiki: z
     .object({
       enabled: z.boolean().optional(),
@@ -37,7 +38,7 @@ export const findImplementationsInputShape = {
 const InputSchema = z.object(findImplementationsInputShape).refine((input) => Boolean(input.brief) !== Boolean(input.goal), "Provide exactly one of brief or goal.");
 export type FindImplementationsInput = z.infer<typeof InputSchema>;
 
-export async function resolveProvider(mode: string | undefined): Promise<EvidenceProvider> {
+export async function resolveProvider(mode: string | undefined, options: { pinRevisions?: boolean } = {}): Promise<EvidenceProvider> {
   switch (mode ?? "mock") {
     case "mock":
       return new MockEvidenceProvider();
@@ -45,7 +46,7 @@ export async function resolveProvider(mode: string | undefined): Promise<Evidenc
     case "hybrid":
       // Configured via injected callTool, setOctocodeToolCaller(), or
       // RESEARCH_OCTOCODE_BRIDGE; fails fast with a structured error otherwise.
-      return resolveOctocodeProvider({ requireConfigured: true });
+      return resolveOctocodeProvider({ requireConfigured: true, ...(options.pinRevisions ? { revisionResolver: githubRevisionResolver() } : {}) });
     case "github": {
       const provider = new GitHubEvidenceProvider();
       if (!provider.configured) {
@@ -68,7 +69,7 @@ export async function findImplementations(input: FindImplementationsInput, deps:
   validateBrief?: typeof validateBrief;
 } = {}) {
   const parsed = InputSchema.parse(input);
-  const provider = await resolveProvider(parsed.mode);
+  const provider = await resolveProvider(parsed.mode, { pinRevisions: parsed.pinRevisions });
   let resumeLedger;
   let resumeRun: ResearchRunV2 | undefined;
   if (parsed.resumeRunId) {

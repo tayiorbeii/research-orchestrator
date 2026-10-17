@@ -10,6 +10,7 @@ import type {
   RepoSearchResult,
   RepoTree,
   ProviderSearchCapabilities,
+  RevisionResolution,
 } from "./EvidenceProvider.js";
 import type { SearchProbe } from "../schemas/index.js";
 import { providerNotConfigured, ResearchError } from "../core/errors.js";
@@ -26,6 +27,13 @@ export interface OctocodeEvidenceProviderConfig {
   callTool?: OctocodeToolCaller;
   /** Cap search results per probe. */
   maxResultsPerProbe?: number;
+  /**
+   * Resolves a repository's default branch to a commit SHA. Octocode has no
+   * tool for this, so pinning is composed from another source (the GitHub
+   * REST provider when a token is available); without it every observation
+   * stays `revisionStatus: "unknown"` and same-revision policy is inert.
+   */
+  revisionResolver?: (input: RepoRef) => Promise<RevisionResolution>;
 }
 
 const NOT_CONFIGURED_HINT =
@@ -48,7 +56,7 @@ export class OctocodeEvidenceProvider implements EvidenceProvider {
   searchCapabilities(): ProviderSearchCapabilities {
     return {
       capabilityVersion: "octocode-gh-search-tools-v1",
-      revisionPinning: false,
+      revisionPinning: typeof this.config.revisionResolver === "function",
       supportedQualifiers: { codeSearch: [], repoSearch: [] },
       codeSearch: true,
       repoSearch: true,
@@ -126,6 +134,11 @@ export class OctocodeEvidenceProvider implements EvidenceProvider {
     return { repo: repo.repo, owner, name, url: `https://github.com/${repo.repo}` };
   }
 
+  async resolveRevision(input: RepoRef): Promise<RevisionResolution> {
+    if (!this.config.revisionResolver) return { unavailableReason: "Octocode cannot resolve revisions; no revision resolver was composed." };
+    return this.config.revisionResolver(input);
+  }
+
   async getFile(input: FileReadRequest): Promise<FileEvidence> {
     const call = this.caller();
     const [owner, name] = input.repo.split("/");
@@ -136,6 +149,8 @@ export class OctocodeEvidenceProvider implements EvidenceProvider {
           owner,
           repo: name,
           path: input.path,
+          // A pinned SHA (or branch) reads the file at that revision instead of HEAD.
+          ...(input.ref ? { branch: input.ref } : {}),
           minify: "none",
           ...(input.startLine ? { startLine: input.startLine, endLine: input.endLine } : { fullContent: true }),
         },
@@ -143,11 +158,13 @@ export class OctocodeEvidenceProvider implements EvidenceProvider {
     })) as OctocodeFileResponse;
     const modernResult = raw.results?.[0];
     const file = modernResult?.data?.files?.[0] ?? raw.files?.[0];
+    const pinned = input.ref && /^[a-f0-9]{40}$/i.test(input.ref) ? input.ref : undefined;
     return {
       provider: "octocode",
       repo: input.repo,
       path: file?.path ?? input.path,
       ref: input.ref,
+      ...(pinned && file?.content !== undefined ? { resolvedRevision: pinned } : {}),
       content: file?.content,
       unavailableReason: file?.error ?? providerErrorText(modernResult?.error),
     };
