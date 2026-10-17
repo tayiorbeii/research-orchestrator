@@ -4,14 +4,14 @@ import { candidateShell } from "../../adapters/EvidenceProvider.js";
 import type { ResearchBrief, BriefFact } from "../../schemas/researchBrief.js";
 import type { ResearchRunV2 } from "../../schemas/researchRun.js";
 import type { BudgetLedger, ProbeOutcome, SearchProbeV2 } from "../../schemas/searchProbeV2.js";
-import type { CandidateRepo, FeatureSpec, ProofRequirement, ScoredCandidate } from "../../schemas/index.js";
+import type { CandidateRepo, ScoredCandidate } from "../../schemas/index.js";
 import { collectEvidence } from "../collectEvidence.js";
-import { normalizeFeatureSpec } from "../normalizeFeatureSpec.js";
 import { scoreCandidate } from "../scoreCandidate.js";
 import { assessBriefClaims } from "../assessment/claimLedger.js";
 import { RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION } from "../evidencePolicy.js";
 import { compileProbes } from "./compileProbes.js";
 import { draftBriefFromGoal } from "./draftBriefFromGoal.js";
+import { briefFeatureSpec, legacyFeatureKey, proofTargetsFromBrief } from "./proofTargets.js";
 import { validateBrief } from "./validateBrief.js";
 import { deriveBriefCoverage, factLabel, obligationSatisfied } from "../assessment/briefCoverage.js";
 
@@ -55,7 +55,7 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
     providerName: deps.provider.name,
     evidenceOrigin: deps.provider.name === "mock" ? "synthetic_mock" : "repository_observation",
     id: runId(legacyRunKey(brief), now, deps.deterministic, deps.parentRunId), createdAt, goal: brief.goal,
-    featureSpec: makeFeatureSpec(brief), probes: [], probesV2: [], compiledProbes: [], probeOutcomes: [], budgetLedger: ledger,
+    featureSpec: briefFeatureSpec(brief), probes: [], probesV2: [], compiledProbes: [], probeOutcomes: [], budgetLedger: ledger,
     brief, candidates: [], scoredCandidates: [], selectedRepos: [], explanations: [], artifacts: [], warnings: [],
     observations: [], assessments: [], coverage: brief.questions.map((question) => ({
       questionId: question.id, status: "not_attempted", supportedClaimIds: [], partialClaimIds: [], contradictedClaimIds: [],
@@ -246,9 +246,10 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
   const observations = [] as Awaited<ReturnType<typeof collectEvidence>>["observations"];
   const anchors = [] as Awaited<ReturnType<typeof collectEvidence>>["anchors"];
   const readProvider = budgetedReadProvider(deps.provider, ledger, now);
+  const targets = proofTargetsFromBrief(brief);
   for (const [index, candidate] of candidates.entries()) {
     if (index >= (deps.maxReposToProve ?? candidates.length)) continue;
-    const collected = await collectEvidence(readProvider, makeFeatureSpec(brief), candidate, deps.deterministic ? () => new Date(DEFAULT_TIME) : now, { allowedSourceKinds: brief.allowedSourceKinds });
+    const collected = await collectEvidence(readProvider, targets, candidate, deps.deterministic ? () => new Date(DEFAULT_TIME) : now, { allowedSourceKinds: brief.allowedSourceKinds });
     observations.push(...collected.observations);
     anchors.push(...collected.anchors);
     warnings.push(...collected.warnings);
@@ -271,7 +272,11 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
     brief, candidateRepos: candidates.map((candidate) => candidate.repo), observations, assessments,
     probes: [...historyProbes, ...scheduled], probeOutcomes: outcomes, providerName: deps.provider.name,
   });
-  const scoredCandidates: ScoredCandidate[] = candidates.map((candidate) => scoreCandidate(makeFeatureSpec(brief), candidate, anchors.filter((anchor) => anchor.repo === candidate.repo), { now: now() }));
+  const featureSpec = briefFeatureSpec(brief);
+  const scoredCandidates: ScoredCandidate[] = candidates.map((candidate) => scoreCandidate(featureSpec, candidate, anchors.filter((anchor) => anchor.repo === candidate.repo), { now: now() }));
+  // A repository is selected when the engine supported at least one of its claims.
+  const selectedRepos = candidates.map((candidate) => candidate.repo)
+    .filter((repo) => assessments.some((assessment) => assessment.subject.repo === repo && assessment.status === "supported" && assessment.assessorOrigin === "engine"));
   const candidateStates = candidates.map((candidate) => {
     const inspected = observations.some((observation) => observation.repo === candidate.repo);
     const eligible = brief.questions.filter((question) => question.required).every((question) => question.obligations.every((obligation, obligationIndex) => obligationSatisfied(question.id, obligation, obligationIndex, [candidate.repo], assessments)));
@@ -291,26 +296,12 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
     schemaVersion: 2, evidencePolicyVersion: RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION,
     providerName: deps.provider.name,
     evidenceOrigin: deps.provider.name === "mock" ? "synthetic_mock" : "repository_observation",
-    id: runId(legacyRunKey(brief), now, deps.deterministic, deps.parentRunId), createdAt, goal: brief.goal, featureSpec: makeFeatureSpec(brief),
+    id: runId(legacyRunKey(brief), now, deps.deterministic, deps.parentRunId), createdAt, goal: brief.goal, featureSpec,
     probes: legacyProbes, probesV2: allProbes, compiledProbes: allProbes, probeOutcomes: outcomes, budgetLedger: ledger, brief,
-    candidates, scoredCandidates, selectedRepos: scoredCandidates.map((candidate) => candidate.repo), explanations: [], artifacts: [],
+    candidates, scoredCandidates, selectedRepos, explanations: [], artifacts: [],
     warnings: [...new Set(warnings)], observations, assessments, coverage, outcome, candidateStates, explanationResults: [],
     ...(deps.parentRunId ? { parentRunId: deps.parentRunId } : {}),
   };
-}
-
-function makeFeatureSpec(brief: ResearchBrief): FeatureSpec {
-  const proofRequirements: ProofRequirement[] = brief.questions.flatMap((question) => question.obligations.flatMap((obligation, index) => obligation.facts.map((fact, factIndex) => ({ key: `${question.id}_${index}_${factIndex}`, description: factLabel(fact), required: question.required, signals: fact.kind === "dependency" ? [fact.packageName] : fact.kind === "config" ? [fact.keyPath, ...(fact.value === undefined ? [] : [String(fact.value)])] : fact.kind === "workflow" ? [fact.command] : fact.signals }))))
-  const terms = brief.vocabulary.map((term) => term.text);
-  return normalizeFeatureSpec(brief.goal, { goalKind: "research", feature: brief.goal, featureKey: legacyFeatureKey(brief), requiredConcepts: [...new Set([...terms, ...proofRequirements.flatMap((item) => item.signals)])], proofRequirements });
-}
-
-function legacyFeatureKey(brief: ResearchBrief): string | undefined {
-  try {
-    return normalizeFeatureSpec(brief.goal).featureKey;
-  } catch {
-    return undefined;
-  }
 }
 
 function legacyRunKey(brief: ResearchBrief): string {

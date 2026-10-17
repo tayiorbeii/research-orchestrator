@@ -89,13 +89,14 @@ afterEach(async () => {
 });
 
 describe("CLI status contract", () => {
-  it("exits two when registered assessors have not established all required claims", async () => {
+  it("exits zero when a goal term is stated in a fixture source file", async () => {
     const result = await runCli(
       "Build a Next.js + Convex app with email magic links via Resend.",
     );
-    expect(result.code, result.stderr).toBe(2);
-    // The brief-based legacy goal adapter has no assessed anchors in this mock result.
-    expect(result.stdout).toContain("status: inconclusive");
+    // Goal words are alternative leads: `convex/auth.ts` stating `Resend` satisfies the drafted question.
+    expect(result.code, result.stderr).toBe(0);
+    expect(result.stdout).toContain("status: complete");
+    expect(result.stdout).toContain("selected: 1");
   });
 
   it("exits two for an inconclusive run", async () => {

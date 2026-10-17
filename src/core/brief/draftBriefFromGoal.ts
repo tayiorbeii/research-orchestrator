@@ -20,13 +20,17 @@ export function draftBriefFromGoal(goal: string, hints?: Partial<ResearchBrief>)
   const groups = clauses.length > 1
     ? clauses.map((clause) => anchoredProbeTerms(extractKeyTerms(clause, 64).filter((term) => !TASK_WORDS.has(term.toLowerCase())))).map(dedupe).filter((group) => group.length)
     : [anchoredProbeTerms(uniqueTerms)];
+  // Goal words are alternative leads for one subtopic, so each becomes its own
+  // fact under an "any" obligation: one source file stating any of them answers
+  // the question. Folding them into one multi-signal fact required every goal
+  // word within 12 lines of one file, which no repository ever satisfied.
   const sourceQuestions = hints?.questions?.length ? hints.questions : groups.map((terms, index) => ({
     id: `q${index + 1}`,
     statement: terms.length ? `${terms.join(" ")} in the context of: ${cleanGoal}` : cleanGoal,
     intentHints: ["implementation_behavior" as const],
     required: true,
     answerScope: "One source-backed example for this subtopic.",
-    obligations: [{ facts: [{ kind: "quotation" as const, signals: terms.length ? terms : [cleanGoal] }], combine: "all" as const, scope: "same_repository" as const }],
+    obligations: [{ facts: (terms.length ? terms : [cleanGoal]).map((signal) => ({ kind: "quotation" as const, signals: [signal] })), combine: "any" as const, scope: "same_repository" as const }],
   }));
 
   const vocabulary: VocabularyTerm[] = hints?.vocabulary?.map((term) => ({ ...term })) ?? [];

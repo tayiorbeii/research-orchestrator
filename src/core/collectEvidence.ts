@@ -1,4 +1,4 @@
-import type { CandidateRepo, EvidenceAnchor, FeatureSpec } from "../schemas/index.js";
+import type { CandidateRepo, EvidenceAnchor, FeatureSpec, ProofRequirement } from "../schemas/index.js";
 import type { EvidenceProvider } from "../adapters/EvidenceProvider.js";
 import { EVIDENCE_POLICY_VERSION } from "./evidencePolicy.js";
 import { createHash } from "node:crypto";
@@ -17,6 +17,26 @@ export interface CollectedEvidence {
   untouched: UntouchedSource[];
 }
 
+/**
+ * What a read is looking for. This is all evidence collection needs to know
+ * about a request: the facts to find (as signal lists), which files the caller
+ * expects to matter, and ecosystem hints for ranking configuration files.
+ */
+export interface ProofTargets {
+  goal: string;
+  goalKind: "application" | "research";
+  requirements: readonly ProofRequirement[];
+  /** Paths the caller expects; they only prioritize paths already matched. */
+  likelyFiles: readonly string[];
+  ecosystem: readonly string[];
+  /** Extra docs-only signals for application goals. */
+  requiredConcepts: readonly string[];
+}
+
+export function proofTargetsFromFeatureSpec(spec: FeatureSpec): ProofTargets {
+  return { goal: spec.goal, goalKind: spec.goalKind, requirements: spec.proofRequirements, likelyFiles: spec.likelyFiles, ecosystem: spec.stack, requiredConcepts: spec.requiredConcepts };
+}
+
 const DOCS_PATH_PATTERN = /(^|\/)readme(\.|$)|\.mdx?$|(^|\/)docs\//i;
 const MANIFEST_PATH_PATTERN =
   /(^|\/)(package\.json|requirements[^/]*\.txt|pyproject\.toml|cargo\.toml|go\.mod|gemfile|composer\.json|pom\.xml|build\.gradle(\.kts)?)$/i;
@@ -30,11 +50,12 @@ const MANIFEST_PATH_PATTERN =
  */
 export async function collectEvidence(
   provider: EvidenceProvider,
-  spec: FeatureSpec,
+  spec: FeatureSpec | ProofTargets,
   candidate: CandidateRepo,
   now: () => Date = () => new Date(),
   options: { allowedSourceKinds?: readonly SourceObservationKind[] } = {},
 ): Promise<CollectedEvidence> {
+  const targets = "proofRequirements" in spec ? proofTargetsFromFeatureSpec(spec) : spec;
   const anchors: EvidenceAnchor[] = [];
   const observations: SourceObservation[] = [];
   const warnings: string[] = [];
@@ -45,13 +66,13 @@ export async function collectEvidence(
   // for bounded config/workflow references when the tree yielded fewer paths.
   const readBudget = Math.max(12, candidate.matchedPaths.length);
   const initialSelection = selectSourceReads({
-    question: spec.goal,
-    obligations: spec.proofRequirements.map((requirement) => requirement.description),
+    question: targets.goal,
+    obligations: targets.requirements.map((requirement) => requirement.description),
     exactHits: candidate.matchedPaths,
     // The candidate's matched paths define the authorized read set here; use
     // likely paths only to prioritize entries already present in that set.
-    callerPaths: spec.likelyFiles.filter((path) => !path.includes("*") && candidate.matchedPaths.includes(path)),
-    ecosystem: spec.stack,
+    callerPaths: targets.likelyFiles.filter((path) => !path.includes("*") && candidate.matchedPaths.includes(path)),
+    ecosystem: targets.ecosystem,
     budget: { total: readBudget, perRepo: readBudget },
   });
   const pathsToRead: SourceRead[] = [...initialSelection.reads];
@@ -99,7 +120,7 @@ export async function collectEvidence(
           retrievalMethod: "getIssue", readStatus: "complete", origin: provider.name === "mock" ? "synthetic" : "engine",
           ...(excerpt !== issue.body ? { redacted: true, redactionNotes: ["Issue content was structurally redacted before storage."] } : {}),
         };
-        for (const req of spec.proofRequirements) {
+        for (const req of targets.requirements) {
           const hits = findSignalHits(lines, req.signals, 1);
           for (const hit of hits) {
             counter += 1;
@@ -196,8 +217,8 @@ export async function collectEvidence(
     const isDocs = DOCS_PATH_PATTERN.test(path);
     const isManifest = MANIFEST_PATH_PATTERN.test(path);
 
-    for (const req of spec.proofRequirements) {
-      const isResearchProof = spec.goalKind === "research" && req.key !== "dependency_proof";
+    for (const req of targets.requirements) {
+      const isResearchProof = targets.goalKind === "research" && req.key !== "dependency_proof";
       // Dependency proof must come from a dependency manifest, not incidental imports.
       if (req.key === "dependency_proof" && !isManifest) continue;
       // Non-dependency application proofs must come from source, not manifests.
@@ -206,7 +227,7 @@ export async function collectEvidence(
       // authoritative evidence of behavior.
       if (req.key === "behavior_proof" && isManifest) continue;
 
-      const signals = isDocs && !isResearchProof ? [...req.signals, ...spec.requiredConcepts] : req.signals;
+      const signals = isDocs && !isResearchProof ? [...req.signals, ...targets.requiredConcepts] : req.signals;
       const hits = findSignalHits(lines, signals, file.startLine ?? 1).filter(
         (hit) => req.key !== "existence_proof" || candidateRepresentsSignal(candidate, hit.signal),
       );
