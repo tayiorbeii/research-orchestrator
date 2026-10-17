@@ -20,8 +20,10 @@ export function compileProbes(
     const eligible = brief.vocabulary.filter((term) => term.questionIds.includes(question.id) &&
       isDistinctiveVocabularyTerm(term) && term.relation !== "predecessor-of" &&
       !(term.egress === "restricted" && !brief.egressPolicy?.allowRestrictedLocalTerms));
-    const hasAnchorOtherThanFactPath = eligible.some((term) => !isFactPathTerm(term, question));
-    const terms = eligible.filter((term) => !hasAnchorOtherThanFactPath || !isFactPathTerm(term, question))
+    const searchable = eligible.filter((term) => !onlyMeaningfulCombined(term, question));
+    const anchors = searchable.length > 0 ? searchable : eligible;
+    const hasAnchorOtherThanFactPath = anchors.some((term) => !isFactPathTerm(term, question));
+    const terms = anchors.filter((term) => !hasAnchorOtherThanFactPath || !isFactPathTerm(term, question))
       .sort((left, right) => Number(isFactPathTerm(left, question)) - Number(isFactPathTerm(right, question)));
     const questionCandidates = terms.map((term) => candidateFor(question, term, brief));
     if (isProposedQuestion(question)) return questionCandidates.slice(0, 1).map((candidate) => ({ ...candidate, issueSearch: true }));
@@ -59,10 +61,10 @@ export function compileProbes(
     }
   }
 
-  // A same-repository "all" obligation with several quotation signals needs a
-  // file that states them together. Separate per-term searches return
-  // different ~35-lead lists that rarely share a repository, so one combined
-  // search for all the signals is the most precise probe and goes first.
+  // A quotation fact with several signals (or a same-repository "all"
+  // obligation) needs a file that states them together. Separate per-term
+  // searches return different ~35-lead lists that rarely share a repository,
+  // so one combined search for the signals is the most precise probe.
   for (const candidate of combinedSignalCandidates(brief)) {
     const key = `${candidate.question.id}|combined:${(candidate.queryTermIds ?? []).join("+")}`;
     if (scheduled.has(key)) continue;
@@ -136,21 +138,55 @@ function languageQualifier(question: ResearchBrief["questions"][number], brief: 
   return `language:${brief.languages[0]}`;
 }
 
-/** One candidate per combine-"all" obligation that names 2+ quotation signals. */
+/**
+ * One candidate per signal set that must co-occur in one file: every
+ * quotation fact with 2+ signals (a fact's signals are always conjunctive,
+ * whatever its obligation's `combine`), plus the union of a combine-"all"
+ * obligation's quotation signals. An "any" obligation never merges signals
+ * across its alternative facts.
+ */
 function combinedSignalCandidates(brief: ResearchBrief): Candidate[] {
   if (brief.questions.length === 0) return [];
   return brief.questions.flatMap((question) => {
     if (isProposedQuestion(question)) return [];
-    return question.obligations.flatMap((obligation) => {
-      if (obligation.combine !== "all") return [];
-      const signals = [...new Set(obligation.facts.flatMap((fact) => fact.kind === "quotation" ? fact.signals : []))];
-      const terms = signals.map((signal) => brief.vocabulary.find((term) => term.questionIds.includes(question.id) && term.text === signal &&
-        !(term.egress === "restricted" && !brief.egressPolicy?.allowRestrictedLocalTerms))).filter((term): term is VocabularyTerm => Boolean(term));
+    const signalSets = question.obligations.flatMap((obligation) => {
+      const facts = obligation.facts.flatMap((fact) => fact.kind === "quotation" ? [fact.signals] : []);
+      return obligation.combine === "all" ? [facts.flat(), ...facts] : facts;
+    });
+    const seen = new Set<string>();
+    return signalSets.flatMap((set) => {
+      const signals = [...new Set(set)];
+      const terms = signals.map((signal) => vocabularyTermFor(brief, question.id, signal)).filter((term): term is VocabularyTerm => Boolean(term));
       if (terms.length < 2) return [];
+      const key = terms.map((term) => term.id).sort().join("+");
+      if (seen.has(key)) return [];
+      seen.add(key);
       const base = candidateFor(question, terms[0]!, brief);
       return [{ ...base, queryText: dedupeProbeTokens(terms.map((term) => term.text).join(" ")), queryTermIds: terms.map((term) => term.id) }];
     });
   });
+}
+
+function vocabularyTermFor(brief: ResearchBrief, questionId: string, signal: string): VocabularyTerm | undefined {
+  return brief.vocabulary.find((term) => term.questionIds.includes(questionId) && term.text === signal &&
+    !(term.egress === "restricted" && !brief.egressPolicy?.allowRestrictedLocalTerms));
+}
+
+/**
+ * A term that is never searchable on its own: every quotation fact naming it
+ * has other signals, and the term is not distinctive alone (`draft`, `reply`).
+ * The combined search covers it; a bare search returns unrelated files.
+ */
+function onlyMeaningfulCombined(term: VocabularyTerm, question: ResearchBrief["questions"][number]): boolean {
+  const facts = question.obligations.flatMap((obligation) => obligation.facts);
+  const naming = facts.filter((fact) => fact.kind === "quotation" && fact.signals.includes(term.text));
+  if (naming.length === 0 || facts.some((fact) => fact.kind !== "quotation" && Object.values(fact).includes(term.text))) return false;
+  return naming.every((fact) => fact.kind === "quotation" && fact.signals.length > 1) && isGenericWord(term.text);
+}
+
+/** A plain dictionary-like word: lowercase or capitalized letters only, no code punctuation or casing. */
+function isGenericWord(text: string): boolean {
+  return /^[A-Za-z][a-z]*$/.test(text) && text.length <= 12;
 }
 
 function obligationPathQualifier(question: ResearchBrief["questions"][number]): string | undefined {

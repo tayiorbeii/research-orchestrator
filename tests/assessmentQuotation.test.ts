@@ -41,6 +41,27 @@ describe("same-subject quotation targets", () => {
     expect(assess({ ...claim, target: { kind: "quotation", path: "CHANGELOG.md", signals: ["auth", "provider"] } }, [changelog]).status).toBe("unsupported");
   });
 
+  it("treats deployment and configuration files as implementation sources", () => {
+    // idla q1: datawranglerai's Dockerfile says FROM docker.n8n.io/n8nio/n8n:latest and was reported "No observation was available".
+    const assess = claimAssessorRegistry.exact_source_quotation!;
+    const image = (path: string) => ({ ...claim, assertion: "implemented: n8n image", target: { kind: "quotation" as const, signals: ["docker.n8n.io/n8nio/n8n"], claimScope: "implemented" as const } });
+    for (const path of ["Dockerfile", "deploy/Dockerfile.prod", "docker-compose.yml", "compose.yaml", "k8s/n8n.yaml", "infra/main.tf", "scripts/start.sh", ".env.example", "workflows/support.json"]) {
+      expect(assess(image(path), [observation(path, "FROM docker.n8n.io/n8nio/n8n:latest", path)]).status, path).toBe("supported");
+    }
+    for (const path of ["README.md", "docs/compose.yaml", "package-lock.json"]) {
+      expect(assess(image(path), [observation(path, "FROM docker.n8n.io/n8nio/n8n:latest", path)]).status, path).not.toBe("supported");
+    }
+  });
+
+  it("names out-of-scope observations instead of claiming none were available", () => {
+    const assess = claimAssessorRegistry.exact_source_quotation!;
+    const implemented = { ...claim, assertion: "implemented: key", target: { kind: "quotation" as const, signals: ["N8N_ENCRYPTION_KEY"], claimScope: "implemented" as const } };
+    const result = assess(implemented, [observation("readme", "N8N_ENCRYPTION_KEY=generate-a-random-key-here", "README.md")]);
+    expect(result.status).toBe("not_assessed");
+    expect(result.rationale).toMatch(/1 observation\(s\) were read.*"implemented" scope; README\.md states the signals/);
+    expect(assess(implemented, []).rationale).toBe("No observation was available for the claim's repository and revision context.");
+  });
+
   it("accepts .gitignore as implementation evidence only for claims that name it", () => {
     const assess = claimAssessorRegistry.exact_source_quotation!;
     const ignoreRule = { ...claim, assertion: 'implemented: source .gitignore states: "dist/"', target: { kind: "quotation" as const, path: ".gitignore", signals: ["dist/"], claimScope: "implemented" as const } };

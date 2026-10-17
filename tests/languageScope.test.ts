@@ -49,8 +49,22 @@ describe("combined-signal probes", () => {
     for (const query of queriesFor(brief, "q1")) expect(query).not.toMatch(/@convex-dev\/auth.*Resend|Resend.*@convex-dev\/auth/);
   });
 
-  it("does not combine signals of an any-combine obligation", () => {
-    const brief = briefWith(undefined, [{ ...q("q1", []), obligations: [{ facts: [{ kind: "quotation", signals: ["Alpha", "Beta"] }], combine: "any", scope: "across_examples" }] }]);
-    expect(queriesFor(brief, "q1")).not.toContain("Alpha Beta");
+  it("does not merge signals across the alternative facts of an any-combine obligation", () => {
+    const brief = briefWith(undefined, [{ ...q("q1", []), obligations: [{ facts: [{ kind: "quotation", signals: ["AlphaToken"] }, { kind: "quotation", signals: ["BetaToken"] }], combine: "any", scope: "same_repository" }] }]);
+    for (const query of queriesFor(brief, "q1")) expect(query).not.toMatch(/AlphaToken.*BetaToken|BetaToken.*AlphaToken/);
+  });
+
+  it("combines a multi-signal fact inside an any-combine obligation and never searches its generic word alone", () => {
+    // idla q4: (gmail + draft) OR (gmail + reply) searched bare "draft" and "reply" and read dovecot/gnupg NEWS files.
+    const brief = briefWith(undefined, [{ ...q("q4", []), obligations: [{ facts: [
+      { kind: "quotation", signals: ["n8n-nodes-base.gmail", "draft"], claimScope: "implemented" },
+      { kind: "quotation", signals: ["n8n-nodes-base.gmail", "reply"], claimScope: "implemented" },
+    ], combine: "any", scope: "same_repository" }] }]);
+    const queries = queriesFor(brief, "q4");
+    expect(queries).toContain("n8n-nodes-base.gmail draft");
+    expect(queries).toContain("n8n-nodes-base.gmail reply");
+    expect(queries).not.toContain("draft");
+    expect(queries).not.toContain("reply");
+    expect(queries).not.toContain("n8n-nodes-base.gmail draft reply");
   });
 });

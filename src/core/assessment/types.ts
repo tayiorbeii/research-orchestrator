@@ -106,7 +106,7 @@ const exactSourceQuotationAssessor: ClaimAssessor = (claim, observations) => {
       : nonEngineOnly
         ? "Non-engine observations cannot produce engine-supported assessments."
         : matching.length === 0
-        ? "No observation was available for the claim's repository and revision context."
+        ? outOfScopeRationale(claim, observations)
         : "The same-subject observations did not pass the Phase 1 exact quotation policy for this assertion.",
     remainingObligations: supporting ? [] : ["Retrieve and validate a same-subject exact source quotation."],
     limitations,
@@ -114,7 +114,25 @@ const exactSourceQuotationAssessor: ClaimAssessor = (claim, observations) => {
   return { ...base, status };
 };
 
-const IMPORT_LINE = /^\s*(?:import\b|export\s+(?:\*|\{[^}]*\})\s+from\b|from\s+[\w.]+\s+import\b|(?:pub(?:\([^)]*\))?\s+)?use\s+[\w:{}, *]+;|#include\b|(?:const|let|var)\s+[^=]+=\s*require\()/;
+/**
+ * Why no observation could be assessed. "No observation" is only true when
+ * nothing was read for the subject; observations excluded by the claim scope
+ * are named, with any file that states the signals as a lead.
+ */
+function outOfScopeRationale(claim: ClaimSpec, observations: readonly SourceObservation[]): string {
+  const subject = observations.filter((observation) => observation.repo === claim.subject.repo &&
+    (claim.subject.revision === undefined || observation.resolvedRevision === claim.subject.revision));
+  if (subject.length === 0 || claim.target?.kind !== "quotation" || !claim.target.claimScope) {
+    return "No observation was available for the claim's repository and revision context.";
+  }
+  const signals = claim.target.signals;
+  const leads = subject.filter((observation) => signals.length > 0 && signals.every((signal) => observation.excerpt?.includes(signal)))
+    .map((observation) => observation.path ?? observation.id);
+  return `${subject.length} observation(s) were read for this repository, but none is a source file in "${claim.target.claimScope}" scope` +
+    (leads.length > 0 ? `; ${leads.slice(0, 3).join(", ")} state${leads.length === 1 ? "s" : ""} the signals outside that scope (a lead, not proof).` : ".");
+}
+
+const IMPORT_LINE =/^\s*(?:import\b|export\s+(?:\*|\{[^}]*\})\s+from\b|from\s+[\w.]+\s+import\b|(?:pub(?:\([^)]*\))?\s+)?use\s+[\w:{}, *]+;|#include\b|(?:const|let|var)\s+[^=]+=\s*require\()/;
 
 /** Lines that belong to import statements, including multi-line
  * `import { … } from` (JS/TS) and `use a::{ … };` (Rust) blocks. */

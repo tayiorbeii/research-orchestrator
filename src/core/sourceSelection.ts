@@ -124,8 +124,29 @@ function isImplementationPath(path: string): boolean {
 }
 
 /** Shared §7.4 path classification for both read ranking and claim scope. */
-export function classifySourcePath(path: string): "implementation_path" | "ecosystem_config" | undefined {
+export function classifySourcePath(path: string): "implementation_path" | "ecosystem_config" | "deployment_config" | undefined {
   if (isEcosystemConfig(path, ["node", "typescript", "python"])) return "ecosystem_config";
   if (isImplementationPath(path)) return "implementation_path";
+  if (isDeploymentConfig(path)) return "deployment_config";
   return undefined;
+}
+
+/**
+ * Files that configure what a system does when it runs: container images,
+ * compose/k8s/Helm YAML, infrastructure code, scripts, env templates, and
+ * structured exports such as workflow JSON. They implement deployment and
+ * configuration facts, so a `FROM image` line in a Dockerfile proves the
+ * image is used. Claim scope only: read ranking is unchanged, so they never
+ * displace source files from a bounded tree sample. Unlike example code, an
+ * `examples/` compose or Terraform file is the deployment pattern itself.
+ */
+function isDeploymentConfig(path: string): boolean {
+  const normalized = normalizePath(path).toLowerCase();
+  if (/(^|\/)(?:test|tests|__tests__|docs?)\//.test(normalized)) return false;
+  const basename = normalized.split("/").at(-1) ?? normalized;
+  if (/^(?:dockerfile|containerfile)(?:\..+)?$|\.dockerfile$/.test(basename)) return true;
+  if (/^(?:makefile|justfile|procfile|caddyfile)$/.test(basename)) return true;
+  if (/^\.env\.(?:example|sample|template|dist)$/.test(basename)) return true;
+  if (/(?:^|[-_.])lock\.json$|^package-lock\.json$|\.lock$/.test(basename)) return false;
+  return /\.(?:ya?ml|json|jsonc|toml|tf|tfvars|hcl|sh|bash|zsh|ps1|sql|nix|conf|ini)$/.test(basename);
 }

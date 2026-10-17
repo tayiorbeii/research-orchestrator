@@ -131,8 +131,14 @@ searches (`language:X`); dependency, config, and workflow facts are never langua
 Quotation evidence is deliberately strict: a signal that appears only on import/use/require
 lines is a partial lead, not proof of implementation, and several signals in one fact must
 appear within 12 lines of each other. For a fact with several signals, the engine also runs one
-combined search for all of them. Avoid generic signals (numbers, common words): code search
-drops punctuation, so `"continue": false` searches for "continue false".
+combined search for all of them, and a generic word in it (`draft`, `reply`) is never searched
+alone. Avoid generic signals (numbers, common words): code search drops punctuation, so
+`"continue": false` searches for "continue false".
+
+`claimScope: "implemented"` accepts source code and the files that configure a running system:
+Dockerfiles, compose/k8s/Helm YAML, JSON exports, TOML, Terraform/HCL, shell scripts, Makefiles,
+SQL, and `.env.example`-style templates. README, CHANGELOG, and `docs/` files are `advertised`;
+when they state the signals, the assessment names them as leads.
 
 `find --goal` remains available as a compatibility adapter, with intentionally
 stricter handling of vague goals. Mock is synthetic fixture data, not live
