@@ -26,8 +26,12 @@ describe("candidate selection across questions", () => {
       return Array.from({ length: count }, (_, i) => ({ repo: `${q.toLowerCase()}/repo-${i}`, path: "src/index.ts", snippet: q, probeId: probes[0]!.id }));
     });
     const run = await executeBrief(brief, { provider, deterministic: true, maxCandidates: 12, validateBrief: (b) => ({ brief: b, issues: [] }), compileProbes: compile });
-    const perQuestion = (prefix: string) => run.candidates.filter((c) => c.repo.startsWith(prefix)).length;
-    expect(run.candidates).toHaveLength(12);
+    // The first pass fills the cap fairly; later reinvestment rounds may promote
+    // further unread leads (bounded by one more cap) because nothing was proved.
+    const firstPass = run.candidates.slice(0, 12);
+    const perQuestion = (prefix: string) => firstPass.filter((c) => c.repo.startsWith(prefix)).length;
+    expect(run.candidates.length).toBeGreaterThanOrEqual(12);
+    expect(run.candidates.length).toBeLessThanOrEqual(24);
     expect(perQuestion("alpha/")).toBeGreaterThanOrEqual(3);
     expect(perQuestion("beta/")).toBeGreaterThanOrEqual(3);
     expect(perQuestion("gamma/")).toBeGreaterThanOrEqual(3);

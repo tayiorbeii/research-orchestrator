@@ -30,6 +30,9 @@ export interface ExecuteBriefDeps {
 }
 
 const DEFAULT_TIME = "2026-06-30T00:00:00.000Z";
+/** Bounds for budget reinvestment after the first proving pass. */
+const REINVESTMENT_ROUNDS = 12;
+const REINVESTMENT_ROUND_READS = 8;
 
 /** Executes only validated, ready briefs. Seeds skip search while retaining reads and assessment. */
 export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps): Promise<ResearchRunV2> {
@@ -231,17 +234,7 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
       ledger.cancelled = true;
       break;
     }
-    try {
-      ledger.consumed.rpcCount += 1;
-      recordMetadataCall(ledger, "repoMetadata");
-      const metadata = await deps.provider.getRepoMetadata({ repo });
-      const shell = candidateShell(repo);
-      candidates.push({ ...shell, ...metadata, discoveredBy: [...(associations.get(repo) ?? [])], matchedPaths: [...(paths.get(repo) ?? [])], candidateSignals: [{ key: "brief_seed_or_probe", label: brief.seeds.some((seed) => seed.repo === repo) ? `Caller supplied seed (${brief.seeds.find((seed) => seed.repo === repo)!.origin}); discovery bypassed.` : "Found by a compiled brief probe; this is a lead, not proof.", source: "search", confidence: 0.25 }] });
-    } catch (error) {
-      warnings.push(`Metadata read failed for ${repo}: ${error instanceof Error ? error.message : String(error)}`);
-      const [owner = "unknown", name = repo] = repo.split("/");
-      candidates.push({ repo, owner, name, discoveredBy: [...(associations.get(repo) ?? [])], matchedPaths: [...(paths.get(repo) ?? [])], candidateSignals: [] });
-    }
+    candidates.push(await describeCandidate(repo, associations, [...(paths.get(repo) ?? [])], deps.provider, ledger, warnings, brief));
   }
   const observations = [] as Awaited<ReturnType<typeof collectEvidence>>["observations"];
   const anchors = [] as Awaited<ReturnType<typeof collectEvidence>>["anchors"];
@@ -261,17 +254,89 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
       ledger.exhaustion = receipt;
     }
   }
+
+  const assess = () => {
+    const allowedObservations = observations.filter((observation) => brief.allowedSourceKinds.includes(observation.kind));
+    const assessments = assessBriefClaims(brief, candidates.map((candidate) => candidate.repo), allowedObservations);
+    const derived = deriveBriefCoverage({
+      brief, candidateRepos: candidates.map((candidate) => candidate.repo), observations, assessments,
+      probes: [...historyProbes, ...scheduled], probeOutcomes: outcomes, providerName: deps.provider.name,
+    });
+    return { assessments, ...derived };
+  };
+  let { assessments, coverage, outcome } = assess();
+
+  // Reinvest what the first pass left: while required questions stay
+  // unresolved and read budget remains, read the search hits those
+  // questions' probes returned but nobody opened — on known candidates first,
+  // then on hit repositories beyond the candidate cap — and reassess.
+  const unresolvedRequired = () => coverage.filter((item) => item.status !== "satisfied" && brief.questions.find((question) => question.id === item.questionId)?.required).map((item) => item.questionId);
+  const readsLeft = () => ledger.limits.fileReads - ledger.consumed.fileReads;
+  const observed = () => new Set(observations.map((observation) => `${observation.repo}:${observation.path}`));
+  const questionOfProbe = (probeId: string) => probeQuestions.get(probeId) ?? [];
+  const recordUntouched = (repo: string, untouched: Awaited<ReturnType<typeof collectEvidence>>["untouched"]) => {
+    for (const item of untouched) {
+      const receipt = ledger.exhaustion ?? { questions: [], repositories: [], referencedFiles: [] };
+      if (!receipt.referencedFiles.some((file) => file.repo === repo && file.path === item.path)) receipt.referencedFiles.push({ repo, path: item.path, reason: item.reason });
+      ledger.exhaustion = receipt;
+    }
+  };
+  const promotionCap = deps.maxReposToProve === undefined ? (deps.maxCandidates ?? 25) : 0;
+  let promoted = 0;
+  for (let round = 1; round <= REINVESTMENT_ROUNDS; round += 1) {
+    const pending = unresolvedRequired();
+    if (pending.length === 0 || readsLeft() <= 0 || ledger.cancelled || now().getTime() >= Date.parse(ledger.deadlineAt ?? createdAt)) break;
+    const seen = observed();
+    const known = new Set(candidates.map((candidate) => candidate.repo));
+    // Unread hits per unresolved question, weakest question first, in result order.
+    const byQuestion = new Map(pending.map((questionId) => [questionId, [] as NormalizedSearchResult[]]));
+    for (const result of results) {
+      if (seen.has(`${result.repo}:${result.path}`)) continue;
+      for (const questionId of questionOfProbe(result.probeId)) byQuestion.get(questionId)?.push(result);
+    }
+    const queue: NormalizedSearchResult[] = [];
+    const pick = (keep: (result: NormalizedSearchResult) => boolean) => {
+      const lists = [...byQuestion.values()].map((list) => list.filter(keep));
+      for (let index = 0; queue.length < REINVESTMENT_ROUND_READS && lists.some((list) => index < list.length); index += 1) {
+        for (const list of lists) {
+          const next = list[index];
+          if (next && queue.length < REINVESTMENT_ROUND_READS && !queue.some((item) => item.repo === next.repo && item.path === next.path)) queue.push(next);
+        }
+      }
+    };
+    pick((result) => known.has(result.repo));
+    if (queue.length === 0 && promoted < promotionCap) pick((result) => !known.has(result.repo));
+    if (queue.length === 0) break;
+    const byRepo = new Map<string, string[]>();
+    for (const item of queue) byRepo.set(item.repo, [...(byRepo.get(item.repo) ?? []), item.path]);
+    let readsThisRound = 0;
+    for (const [repo, paths] of byRepo) {
+      if (readsLeft() <= 0 || now().getTime() >= Date.parse(ledger.deadlineAt ?? createdAt)) break;
+      let candidate = candidates.find((item) => item.repo === repo);
+      if (!candidate) {
+        if (promoted >= promotionCap) continue;
+        promoted += 1;
+        candidate = await describeCandidate(repo, associations, paths, deps.provider, ledger, warnings, brief);
+        candidates.push(candidate);
+      }
+      const existing = observations.filter((observation) => observation.repo === repo).length;
+      const collected = await collectEvidence(readProvider, targets, candidate, deps.deterministic ? () => new Date(DEFAULT_TIME) : now, {
+        allowedSourceKinds: brief.allowedSourceKinds, paths, observationOffset: existing, anchorOffset: anchors.filter((anchor) => anchor.repo === repo).length,
+      });
+      observations.push(...collected.observations);
+      anchors.push(...collected.anchors);
+      warnings.push(...collected.warnings);
+      recordUntouched(repo, collected.untouched);
+      readsThisRound += collected.observations.length;
+    }
+    if (readsThisRound === 0) break;
+    warnings.push(`reinvested budget: round ${round} read ${readsThisRound} unread search hit(s) for unresolved question(s) ${pending.join(", ")}.`);
+    ({ assessments, coverage, outcome } = assess());
+  }
   for (const candidate of candidates) {
     const repoAnchors = anchors.filter((anchor) => anchor.repo === candidate.repo);
     if (repoAnchors.length) candidate.candidateSignals.push({ key: "source_observation", label: `${repoAnchors.length} source anchor(s) collected for assessment.`, source: "file", confidence: 0.5, evidence: repoAnchors });
   }
-
-  const allowedObservations = observations.filter((observation) => brief.allowedSourceKinds.includes(observation.kind));
-  const assessments = assessBriefClaims(brief, candidates.map((candidate) => candidate.repo), allowedObservations);
-  const { coverage, outcome } = deriveBriefCoverage({
-    brief, candidateRepos: candidates.map((candidate) => candidate.repo), observations, assessments,
-    probes: [...historyProbes, ...scheduled], probeOutcomes: outcomes, providerName: deps.provider.name,
-  });
   const featureSpec = briefFeatureSpec(brief);
   const scoredCandidates: ScoredCandidate[] = candidates.map((candidate) => scoreCandidate(featureSpec, candidate, anchors.filter((anchor) => anchor.repo === candidate.repo), { now: now() }));
   // A repository is selected when the engine supported at least one of its claims.
@@ -352,6 +417,30 @@ export function selectCandidateRepos(input: {
   return chosen;
 }
 
+/** One metadata call turns a discovered repository into a candidate; failure keeps a bare shell. */
+async function describeCandidate(
+  repo: string,
+  associations: ReadonlyMap<string, ReadonlySet<string>>,
+  matchedPaths: string[],
+  provider: EvidenceProvider,
+  ledger: BudgetLedger,
+  warnings: string[],
+  brief: ResearchBrief,
+): Promise<CandidateRepo> {
+  const discoveredBy = [...(associations.get(repo) ?? [])];
+  try {
+    ledger.consumed.rpcCount += 1;
+    recordMetadataCall(ledger, "repoMetadata");
+    const metadata = await provider.getRepoMetadata({ repo });
+    const seed = brief.seeds.find((item) => item.repo === repo);
+    return { ...candidateShell(repo), ...metadata, discoveredBy, matchedPaths, candidateSignals: [{ key: "brief_seed_or_probe", label: seed ? `Caller supplied seed (${seed.origin}); discovery bypassed.` : "Found by a compiled brief probe; this is a lead, not proof.", source: "search", confidence: 0.25 }] };
+  } catch (error) {
+    warnings.push(`Metadata read failed for ${repo}: ${error instanceof Error ? error.message : String(error)}`);
+    const [owner = "unknown", name = repo] = repo.split("/");
+    return { repo, owner, name, discoveredBy, matchedPaths, candidateSignals: [] };
+  }
+}
+
 /** Files that declare a question's dependency/config/workflow facts. */
 function declarationPaths(question: ResearchBrief["questions"][number]): string[] {
   const paths = question.obligations.flatMap((obligation) => obligation.facts.flatMap((fact) => {
@@ -385,18 +474,27 @@ function runId(briefId: string, now: () => Date, deterministic = false, parentRu
 
 function budgetedReadProvider(provider: EvidenceProvider, ledger: BudgetLedger, now: () => Date): EvidenceProvider {
   const base = Date.parse(ledger.startedAt ?? now().toISOString());
+  // One resolution per repository and ref for the whole run: follow-up read
+  // passes reuse the pinned SHA instead of paying another metadata call.
+  const resolutions = new Map<string, Promise<Awaited<ReturnType<NonNullable<EvidenceProvider["resolveRevision"]>>>>>();
   return {
     name: provider.name,
     searchCapabilities: () => provider.searchCapabilities(),
     searchCode: (probes) => provider.searchCode(probes),
     searchRepos: (query) => provider.searchRepos(query),
     getRepoMetadata: (repo) => provider.getRepoMetadata(repo),
-    ...(provider.resolveRevision ? { resolveRevision: async (input: Parameters<NonNullable<EvidenceProvider["resolveRevision"]>>[0]) => {
-      if (provider.name !== "mock") {
-        ledger.consumed.rpcCount += 1;
-        recordMetadataCall(ledger, "revisionResolution");
+    ...(provider.resolveRevision ? { resolveRevision: (input: Parameters<NonNullable<EvidenceProvider["resolveRevision"]>>[0]) => {
+      const key = `${input.repo}@${input.ref ?? ""}`;
+      let pending = resolutions.get(key);
+      if (!pending) {
+        if (provider.name !== "mock") {
+          ledger.consumed.rpcCount += 1;
+          recordMetadataCall(ledger, "revisionResolution");
+        }
+        pending = provider.resolveRevision!(input);
+        resolutions.set(key, pending);
       }
-      return provider.resolveRevision!(input);
+      return pending;
     } } : {}),
     getFile: async (input: FileReadRequest): Promise<FileEvidence> => {
       const repoReads = ledger.consumed.fileReadsByRepo[input.repo] ?? 0;

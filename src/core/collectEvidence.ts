@@ -49,30 +49,42 @@ const MANIFEST_PATH_PATTERN =
  * Documentation is partial context for application goals, but may be proved
  * evidence for research requirements where docs are the authoritative source.
  */
+export interface CollectEvidenceOptions {
+  allowedSourceKinds?: readonly SourceObservationKind[];
+  /** Read exactly these paths instead of the candidate's matched paths (a follow-up pass). */
+  paths?: readonly string[];
+  /** Ids continue after observations/anchors already recorded for this repository. */
+  observationOffset?: number;
+  anchorOffset?: number;
+}
+
 export async function collectEvidence(
   provider: EvidenceProvider,
   spec: FeatureSpec | ProofTargets,
   candidate: CandidateRepo,
   now: () => Date = () => new Date(),
-  options: { allowedSourceKinds?: readonly SourceObservationKind[] } = {},
+  options: CollectEvidenceOptions = {},
 ): Promise<CollectedEvidence> {
   const targets = "proofRequirements" in spec ? proofTargetsFromFeatureSpec(spec) : spec;
   const anchors: EvidenceAnchor[] = [];
   const observations: SourceObservation[] = [];
   const warnings: string[] = [];
   const untouched: UntouchedSource[] = [];
-  let counter = 0;
+  let counter = options.anchorOffset ?? 0;
+  const nextSequence = () => (options.observationOffset ?? 0) + observations.length + 1;
 
   // Match HybridRepoExplainer's existing per-repo ceiling while leaving room
   // for bounded config/workflow references when the tree yielded fewer paths.
-  const readBudget = Math.max(12, candidate.matchedPaths.length);
+  // An explicit follow-up path set is read as-is, with no reference following.
+  const authorized = options.paths ?? candidate.matchedPaths;
+  const readBudget = options.paths ? options.paths.length : Math.max(12, candidate.matchedPaths.length);
   const initialSelection = selectSourceReads({
     question: targets.goal,
     obligations: targets.requirements.map((requirement) => requirement.description),
-    exactHits: candidate.matchedPaths,
+    exactHits: authorized,
     // The candidate's matched paths define the authorized read set here; use
     // likely paths only to prioritize entries already present in that set.
-    callerPaths: targets.likelyFiles.filter((path) => !path.includes("*") && candidate.matchedPaths.includes(path)),
+    callerPaths: targets.likelyFiles.filter((path) => !path.includes("*") && authorized.includes(path)),
     ecosystem: targets.ecosystem,
     budget: { total: readBudget, perRepo: readBudget },
   });
@@ -113,7 +125,7 @@ export async function collectEvidence(
         const excerpt = safeIssue.body;
         const lines = excerpt.split("\n");
         const observation: SourceObservation = {
-          id: `obs_${candidate.owner}_${candidate.name}_${observations.length + 1}`,
+          id: `obs_${candidate.owner}_${candidate.name}_${nextSequence()}`,
           kind: "issue_proposal", repo: candidate.repo, url: issue.url, path: `issues/${issue.number}`,
           issueState: issue.state, revisionStatus: "moving_ref", excerpt,
           contentHash: createHash("sha256").update(excerpt).digest("hex"), startLine: 1,
@@ -153,14 +165,14 @@ export async function collectEvidence(
       file = await provider.getFile({ repo: candidate.repo, path, ref: requestedRef });
       fileProvider = file.provider;
       if (file.unavailableReason || file.readStatus === "unavailable") {
-        observations.push(observation(candidate, path, file, file.content, "unavailable", observations.length + 1, now, pinnedRevision));
+        observations.push(observation(candidate, path, file, file.content, "unavailable", nextSequence(), now, pinnedRevision));
         warnings.push(
           `missingProof: ${candidate.repo}:${path} could not be read (${file.unavailableReason ?? "provider marked the source unavailable"}).`,
         );
         continue;
       }
       if (file.path !== path) {
-        observations.push(observation(candidate, path, file, file.content, "partial", observations.length + 1, now, pinnedRevision));
+        observations.push(observation(candidate, path, file, file.content, "partial", nextSequence(), now, pinnedRevision));
         warnings.push(
           `missingProof: ${candidate.repo}:${path} returned content for a different path (${file.path}); no quotation support was recorded.`,
         );
@@ -169,7 +181,7 @@ export async function collectEvidence(
       content = file.content;
     } catch (error) {
       observations.push({
-        id: `obs_${candidate.owner}_${candidate.name}_${observations.length + 1}`,
+        id: `obs_${candidate.owner}_${candidate.name}_${nextSequence()}`,
         kind: "repository_file", repo: candidate.repo, path,
         requestedRevision: requestedRef,
         ...(pinnedRevision ? { resolvedRevision: pinnedRevision } : {}),
@@ -183,12 +195,12 @@ export async function collectEvidence(
       continue;
     }
     if (content === undefined) {
-      observations.push(observation(candidate, path, file, undefined, "unavailable", observations.length + 1, now));
+      observations.push(observation(candidate, path, file, undefined, "unavailable", nextSequence(), now));
       warnings.push(`missingProof: ${candidate.repo}:${path} returned no content.`);
       continue;
     }
 
-    const sourceObservation = observation(candidate, path, file, content, inferredReadStatus(file), observations.length + 1, now, pinnedRevision);
+    const sourceObservation = observation(candidate, path, file, content, inferredReadStatus(file), nextSequence(), now, pinnedRevision);
     observations.push(sourceObservation);
 
     const remaining = readBudget - pathsToRead.length;
