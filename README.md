@@ -1,36 +1,36 @@
 # Research Orchestrator
 
-**Evidence-grounded implementation research.** Give it a high-level feature
-goal — it searches GitHub, scores candidate repositories, reads exact source
-evidence, and writes planning artifacts (`research.md`, `plan.md`,
-`evidence.json`, `implementation-checklist.md`) you can build from. Runs as a
-CLI and as an MCP server, with Octocode as the evidence engine and optional
-DeepWiki enrichment.
+**Evidence-grounded implementation research.** Give it a research brief (or a
+goal sentence it drafts into one) — it searches GitHub, reads source at pinned
+revisions, assesses every fact against every repository it read, keeps spending
+its budget on unresolved questions, and writes planning artifacts
+(`research.md`, `plan.md`, `evidence.json`, `implementation-checklist.md`) that
+cite file and line. Runs as a CLI and as an MCP server, with Octocode as the
+evidence engine and optional DeepWiki enrichment.
 
 > "Find examples of a Next.js + Convex app using email magic links, extract
 > the implementation pattern, and produce a grounded plan."
 
 > "Find examples of a Next.js + Convex app using email magic links, extract the implementation pattern, and produce a grounded plan."
 
-into a repeatable workflow. New work uses a validated v2 research brief and
-question-scoped evidence ledger. Candidate scores and selected-repository lists
-help discovery but do not verify claims.
+into a repeatable workflow. Every run uses a validated v2 research brief and a
+question-scoped claim ledger: a repository is *selected* only when the engine
+supported at least one of its claims from source.
 
-The original candidate-oriented pipeline remains available as a compatibility
-projection. Its stages describe discovery and artifact production, not the
-current evidence authority.
+One run does the following (see `docs/01_architecture.md`):
 
-The compatibility workflow can:
-
-1. Normalize the user's goal into a structured feature spec.
-2. Generate high-precision and high-recall GitHub/Octocode probes.
-3. Collect candidate repositories.
-4. Rank candidates for further inspection.
-5. Read exact source evidence.
-6. Optionally enrich with DeepWiki when available and fresh.
-7. Fall back to Octocode/local repo understanding when DeepWiki is unavailable or stale.
-8. Produce reusable planning artifacts with evidence anchors.
-9. Expose the workflow as an MCP server and/or CLI.
+1. Validate the brief (or draft one from a goal sentence) and resolve its budgets.
+2. Compile one GitHub/Octocode search per distinctive term, plus a combined search
+   for each multi-signal fact.
+3. Select candidate repositories fairly across questions and read their matched
+   files at a pinned commit.
+4. Assess every fact against every repository that was read (the claim ledger) and
+   derive per-question coverage.
+5. Reinvest unspent budget: read unopened hits and promote further hit repositories
+   while required questions remain unresolved.
+6. Optionally enrich with DeepWiki when available and fresh (MCP `explainRepoPattern`).
+7. Write `research.md`, `plan.md`, `implementation-checklist.md` and `evidence.json`
+   from one report model, and cache the run for `--resume`.
 
 ## Install
 
@@ -140,9 +140,26 @@ Dockerfiles, compose/k8s/Helm YAML, JSON exports, TOML, Terraform/HCL, shell scr
 SQL, and `.env.example`-style templates. README, CHANGELOG, and `docs/` files are `advertised`;
 when they state the signals, the assessment names them as leads.
 
-`find --goal` remains available as a compatibility adapter, with intentionally
-stricter handling of vague goals. Mock is synthetic fixture data, not live
-repository research; its mode and synthetic origin are shown in receipts.
+`find --goal` drafts a brief from the goal sentence (one quotation fact per
+distinctive word, any of which satisfies the question) and runs it on the same
+path as `--brief`; it is the weakest way to write a brief, not a different
+engine. Mock is synthetic fixture data, not live repository research; its mode
+and synthetic origin are shown in receipts.
+
+After the first proving pass the run reinvests unspent budget: while required
+questions are unresolved it reads the search hits nobody opened, promotes hit
+repositories beyond the candidate cap, and reassesses, until the questions are
+satisfied or the search/read/deadline budgets run out. `--mode octocode` pins
+each repository to a commit SHA through your GitHub token (`gh auth login` or
+`GITHUB_TOKEN`), so findings cite an immutable revision; the MCP find tool opts
+in with `pinRevisions: true`.
+
+`research.md` reports, per question: supported findings (repository, `path:line`,
+quoted text, link, revision), leads (files that state the signals but cannot
+count, such as documentation or imports), unsatisfied facts, and unopened search
+hits to read next — followed by the search table, candidates, the budget receipt
+and grouped diagnostics. `evidence.json` carries every observation and claim;
+each claim names its fact (`questionId`, obligation and fact index, kind).
 
 ## Offline evaluation
 
@@ -168,7 +185,7 @@ and committed demo receipts under `examples/receipts/`.
 ```text
 .
 ├── src/            # TypeScript source (core engine, adapters, MCP server, schemas)
-│   ├── core/       # goal normalization, probe generation, pipeline, scoring
+│   ├── core/       # brief drafting/validation, probe compilation, run engine, claim ledger, report
 │   ├── adapters/   # evidence providers (Octocode bridge, mock, GitHub)
 │   ├── mcp/        # MCP server exposing the research.* tools
 │   ├── cache/      # run cache

@@ -373,7 +373,8 @@ The suite runs unit + golden-snapshot tests across the core stages, including:
 - **Bridge tests** (`octocodeBridge.test.ts`, 26 tests) — config parsing, result
   unwrapping, retry classification, all three export shapes, and an in-process
   MCP round-trip via `InMemoryTransport` (no subprocess/network).
-- Core unit tests: `normalizeFeatureSpec`, `generateSearchProbes`,
+- Core unit tests: `claimLedger`, `briefReport`, `reinvestment`, `excerptPolicy`,
+  `revisionSeam`, `executeBrief`, `languageScope`, `normalizeFeatureSpec`,
   `scoreCandidate`, `writeArtifacts`, `redact`, `schemas`, `pipeline`,
   `octocodeProvider`, `hybridExplainer`.
 
@@ -541,41 +542,44 @@ you pass `--no-cache`. The `.research/` directory holds your `--out` outputs
 After `npm run build`, import the compiled library:
 
 ```ts
-import { runResearch } from "./dist/index.js";
+import { runPipeline, runAnchors, executeBrief, validateBrief, writeArtifacts } from "./dist/index.js";
 import { MockEvidenceProvider } from "./dist/adapters/MockEvidenceProvider.js";
 // or for live:
-import { resolveOctocodeProvider } from "./dist/adapters/bridge.js";
+import { githubRevisionResolver, resolveOctocodeProvider } from "./dist/adapters/bridge.js";
 
 const provider = new MockEvidenceProvider(); // deterministic
-const { run, evidence, pattern } = await runResearch({
+
+// A goal sentence is drafted into a brief and run on the one execution path.
+const run = await runPipeline({
   goal: "Next.js + Convex app with email magic links via Resend",
   provider,
   maxCandidates: 25,
   deterministic: true,
-  // For novel domains, provide a Partial<FeatureSpec> so the engine generates
-  // exact code probes instead of one broad repository query:
+  // For novel domains, supply the questions yourself: facts are the search
+  // terms and the proof contract (see "Writing the request" in the README).
   hints: {
-    featureKey: "custom-controller-input",
-    feature: "external controller input",
-    requiredConcepts: ["navigator.requestMIDIAccess", "onmidimessage"],
-    likelyFiles: ["package.json", "index.html", "sketch.js"],
-    proofRequirements: [
-      {
-        key: "midi_input_proof",
-        description: "Browser requests MIDI access and handles messages.",
-        required: true,
-        signals: ["navigator.requestMIDIAccess", "onmidimessage"],
-      },
-    ],
+    questions: [{
+      id: "midi", statement: "How does the browser request MIDI access and handle messages?",
+      intentHints: ["implementation_behavior"], required: true, answerScope: "One source-backed example.",
+      obligations: [{ facts: [{ kind: "quotation", signals: ["navigator.requestMIDIAccess", "onmidimessage"], claimScope: "implemented" }], combine: "all", scope: "same_repository" }],
+    }],
   },
 });
+
+// Or execute a brief you wrote (what `find --brief` does):
+// const { brief } = validateBrief(JSON.parse(await readFile("brief.json", "utf8")));
+// const run = await executeBrief(brief, { provider });
+
+await writeArtifacts(run, "./out", { evidence: runAnchors(run) });
+console.log(run.outcome, run.coverage.map((q) => `${q.questionId}:${q.status}`));
 ```
 
-Most `proofRequirements[].signals` are acceptable alternatives during exact-file
-collection. `existence_proof` is stricter: every named system signal must have a
-proved anchor before the run can complete. `evidence.json` records the exact
-`matchedSignal` for auditability. High-precision search still pairs leading
-signals, so inspect the evidence map before claiming an end-to-end join.
+A quotation fact with several signals needs them within 12 lines of one file; the
+run also issues one combined search for them. `evidence.json` records every
+observation, the claim per (fact, repository read) with its `fact` reference, and
+the exact `matchedSignal` on each anchor. For live Octocode runs pass
+`revisionResolver: githubRevisionResolver()` to `resolveOctocodeProvider` so reads
+are pinned to a commit SHA, as the CLI does.
 
 For live Octocode, inject the bridge exactly as the CLI does:
 

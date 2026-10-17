@@ -17,8 +17,9 @@ plans/
 *.traineddata
 *.zip
 
-# Ephemeral agent/pipeline artifacts (pi-subagents transcripts, etc.)
+# Ephemeral agent/pipeline artifacts (pi-subagents transcripts, Claude Code hook caches, etc.)
 .pi-subagents/
+.claude/edit-cache/
 
 # Pipeline output (per-video screenshots, crops, manifests, prompts)
 out/
