@@ -128,7 +128,9 @@ describe("MCP tools (milestone 3)", () => {
     const output = await findImplementations({ goal: GOAL, mode: "mock" });
     expect(output.runId).toBe("run_mock_next_convex_magic_link_auth");
     expect(output.featureSpec.featureKey).toBe("next-convex-magic-link-auth");
-    expect(output.scoredCandidates.length).toBe(2);
+    // Brief runs carry no legacy scores; the claim ledger says what each candidate established.
+    expect(output.candidates.length).toBe(2);
+    expect(output.scoredCandidates).toEqual([]);
     expect(output.selectedRepos.length).toBeGreaterThan(0);
     expect(output.evidence.length).toBeGreaterThanOrEqual(3);
   });

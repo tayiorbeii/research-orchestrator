@@ -6,7 +6,6 @@ import type { ResearchRunV2 } from "../../schemas/researchRun.js";
 import type { BudgetLedger, ProbeOutcome, SearchProbeV2 } from "../../schemas/searchProbeV2.js";
 import type { CandidateRepo, ScoredCandidate } from "../../schemas/index.js";
 import { collectEvidence } from "../collectEvidence.js";
-import { scoreCandidate } from "../scoreCandidate.js";
 import { assessBriefClaims } from "../assessment/claimLedger.js";
 import { RESEARCH_RUN_V2_EVIDENCE_POLICY_VERSION } from "../evidencePolicy.js";
 import { compileProbes } from "./compileProbes.js";
@@ -338,7 +337,9 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
     if (repoAnchors.length) candidate.candidateSignals.push({ key: "source_observation", label: `${repoAnchors.length} source anchor(s) collected for assessment.`, source: "file", confidence: 0.5, evidence: repoAnchors });
   }
   const featureSpec = briefFeatureSpec(brief);
-  const scoredCandidates: ScoredCandidate[] = candidates.map((candidate) => scoreCandidate(featureSpec, candidate, anchors.filter((anchor) => anchor.repo === candidate.repo), { now: now() }));
+  // Brief runs carry no legacy candidate scores: the claim ledger and
+  // coverage say what each repository established, and the report renders that.
+  const scoredCandidates: ScoredCandidate[] = [];
   // A repository is selected when the engine supported at least one of its claims.
   const selectedRepos = candidates.map((candidate) => candidate.repo)
     .filter((repo) => assessments.some((assessment) => assessment.subject.repo === repo && assessment.status === "supported" && assessment.assessorOrigin === "engine"));

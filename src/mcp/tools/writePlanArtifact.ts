@@ -52,9 +52,9 @@ export async function writePlanArtifact(input: WritePlanArtifactInput) {
     formats: parsed.formats,
   });
 
-  const unresolvedQuestions = [
-    ...new Set(run.scoredCandidates.flatMap((s) => s.missingProof.map((m) => `${s.repo}: ${m}`))),
-  ];
+  const unresolvedQuestions = run.schemaVersion === 2 && run.brief
+    ? (run.coverage ?? []).filter((question) => question.status !== "satisfied").flatMap((question) => question.unsatisfiedObligations.map((fact) => `${question.questionId}: ${fact}`))
+    : [...new Set(run.scoredCandidates.flatMap((s) => s.missingProof.map((m) => `${s.repo}: ${m}`)))];
   const receipt = run.schemaVersion === 2 && run.observations && run.assessments && run.candidateStates
     ? deriveCoverage({
         spec: run.featureSpec, candidates: run.candidates.map((candidate) => candidate.repo),

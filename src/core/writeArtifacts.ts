@@ -13,6 +13,7 @@ import { downgradeAnchorsForRedactedObservations, redactArtifactContent, redactR
 import { EVIDENCE_POLICY_VERSION, isExactQuotationSupport } from "./evidencePolicy.js";
 import { deriveCoverage } from "./assessment/coverage.js";
 import { deriveBriefCoverage } from "./assessment/briefCoverage.js";
+import { deriveBriefReport, isBriefRun, renderBriefChecklistMd, renderBriefPlanMd, renderBriefResearchMd } from "./report/briefReport.js";
 
 export interface WriteArtifactsOptions {
   /** Exact evidence anchors gathered during the run. */
@@ -77,11 +78,14 @@ export async function writeArtifacts(
   };
 
   const status = deriveRunStatus(receiptRun, evidence);
+  // A brief run renders from one report model; the FeatureSpec-shaped
+  // renderers below serve legacy goal runs only.
+  const report = isBriefRun(receiptRun) ? deriveBriefReport(receiptRun, evidence, status) : undefined;
   if (formats.includes("research_md")) {
-    await writeOne("research.md", "research", withMockOrigin(receiptRun, evidence, renderResearchMd(receiptRun, evidence, pattern, status)));
+    await writeOne("research.md", "research", withMockOrigin(receiptRun, evidence, report ? renderBriefResearchMd(report) : renderResearchMd(receiptRun, evidence, pattern, status)));
   }
   if (formats.includes("plan_md")) {
-    await writeOne("plan.md", "plan", withMockOrigin(receiptRun, evidence, renderPlanMd(receiptRun, evidence, pattern, status)));
+    await writeOne("plan.md", "plan", withMockOrigin(receiptRun, evidence, report ? renderBriefPlanMd(report) : renderPlanMd(receiptRun, evidence, pattern, status)));
   }
   if (formats.includes("evidence_json")) {
     await writeOne("evidence.json", "evidence", renderEvidenceJson(receiptRun, evidence, status));
@@ -90,7 +94,7 @@ export async function writeArtifacts(
     await writeOne(
       "implementation-checklist.md",
       "checklist",
-      withMockOrigin(receiptRun, evidence, renderChecklistMd(receiptRun, evidence, pattern, status)),
+      withMockOrigin(receiptRun, evidence, report ? renderBriefChecklistMd(report) : renderChecklistMd(receiptRun, evidence, pattern, status)),
     );
   }
   return refs;
