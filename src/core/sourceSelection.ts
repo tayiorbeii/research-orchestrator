@@ -120,7 +120,15 @@ function isEcosystemConfig(path: string, ecosystems: string[]): boolean {
 
 function isImplementationPath(path: string): boolean {
   return /\.(?:[cm]?[jt]sx?|py|pyi|rs|go|java|kt|rb|php|cs|cpp|h|swift)$/i.test(path) &&
+    !isTestSourcePath(path) &&
     !/(^|\/)(?:test|tests|__tests__|docs?|examples?)\//i.test(path);
+}
+
+/** Test text is evidence of assertions, independently of whether they ran. */
+export function isTestSourcePath(path: string): boolean {
+  return /\.(?:[cm]?[jt]sx?|py|pyi|rs|go|java|kt|rb|php|cs|cpp|h|swift)$/i.test(path) &&
+    (/(^|\/)(?:test|tests|__tests__)\//i.test(path) ||
+      /(?:\.test\.|\.spec\.|(?:^|\/)test_|_test\.)/i.test(path));
 }
 
 /** Shared §7.4 path classification for both read ranking and claim scope. */

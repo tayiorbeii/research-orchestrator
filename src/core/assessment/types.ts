@@ -3,13 +3,13 @@ import type { ClaimAssessment, SourceObservation } from "../../schemas/researchC
 import { configValueAssessor } from "./configValue.js";
 import { dependencyDeclarationAssessor } from "./dependencyDeclaration.js";
 import { workflowCommandAssessor } from "./workflowCommand.js";
-import { classifySourcePath } from "../sourceSelection.js";
+import { classifySourcePath, isTestSourcePath } from "../sourceSelection.js";
 
 export type ClaimTarget =
   | { kind: "dependency"; packageName: string; constraint?: string; file?: string }
   | { kind: "config"; keyPath: string; value?: unknown; file?: string }
   | { kind: "workflow"; command: string; file?: string }
-  | { kind: "quotation"; path?: string; signals: string[]; claimScope?: "advertised" | "proposed" | "implemented" };
+  | { kind: "quotation"; path?: string; signals: string[]; claimScope?: "advertised" | "proposed" | "implemented" | "tested" };
 
 export function renderTargetAssertion(target: ClaimTarget): string {
   switch (target.kind) {
@@ -66,6 +66,9 @@ const exactSourceQuotationAssessor: ClaimAssessor = (claim, observations) => {
   const assessedObservation = supporting ?? matching.find(isAssessableObservation);
   const evidenceOrigin = assessedObservation ? claimEvidenceOrigin(assessedObservation) : undefined;
   const limitations = supporting ? ["Supports only that the source states the quoted text."] : [];
+  if (supporting && claim.target?.kind === "quotation" && claim.target.claimScope === "tested") {
+    limitations.push("Supports published test assertions only; it does not establish that the tests ran or passed.");
+  }
   if (supporting?.kind === "issue_proposal" && supporting.issueState === "closed") {
     limitations.push("The issue is closed; closure does not establish that the proposal shipped or was rejected.");
   }
@@ -103,6 +106,10 @@ function isIgnoreFile(path: string): boolean {
 function quotationScopeAllows(target: Extract<ClaimTarget, { kind: "quotation" }>, observation: SourceObservation): boolean {
   if (observation.kind === "issue_proposal") return target.claimScope === "proposed";
   if (target.claimScope === "proposed") return false;
+  if (target.claimScope === "tested") {
+    return observation.kind === "repository_file" && target.path !== undefined &&
+      target.path === observation.path && !/[*?]/.test(target.path) && isTestSourcePath(target.path);
+  }
   if (target.claimScope === "advertised") {
     return observation.kind === "documentation_page" ||
       observation.kind === "repository_file" && classifySourcePath(observation.path ?? "") === undefined;

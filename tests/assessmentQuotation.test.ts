@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { claimAssessorRegistry, type ClaimSpec } from "../src/core/assessment/types.js";
 import type { SourceObservation } from "../src/schemas/researchContracts.js";
+import { BriefFactSchema } from "../src/schemas/researchBrief.js";
 
 const claim: ClaimSpec = {
   claimId: "role", questionId: "q1", subject: { repo: "org/repo" },
@@ -22,6 +23,24 @@ function observation(id: string, excerpt: string, path = "src/auth.ts"): SourceO
 }
 
 describe("same-subject quotation targets", () => {
+  it("keeps explicit test assertions separate from implementation and execution evidence", () => {
+    const assess = claimAssessorRegistry.exact_source_quotation!;
+    for (const path of ["packages/core/test/clock.test.ts", "src/clock.test.ts", "tests/test_clock.py", "clock_test.go"]) {
+      const source = observation("test", "expect(clock.increment(250)).toEqual(saved);", path);
+      const target = { kind: "quotation" as const, path, signals: ["clock.increment", "toEqual"], claimScope: "tested" as const };
+      expect(assess({ ...claim, target }, [source])).toMatchObject({
+        status: "supported", limitations: expect.arrayContaining([expect.stringContaining("does not establish that the tests ran or passed")]),
+      });
+      expect(assess({ ...claim, target: { ...target, claimScope: "implemented" } }, [source]).status).not.toBe("supported");
+      expect(assess({ ...claim, target: { ...target, path: undefined } }, [source]).status).not.toBe("supported");
+      expect(assess({ ...claim, target: { ...target, path: "tests/*.ts" } }, [source]).status).not.toBe("supported");
+    }
+    expect(BriefFactSchema.safeParse({ kind: "quotation", signals: ["expect"], claimScope: "tested" }).success).toBe(false);
+    expect(BriefFactSchema.safeParse({ kind: "quotation", path: "tests/*.ts", signals: ["expect"], claimScope: "tested" }).success).toBe(false);
+    expect(BriefFactSchema.safeParse({ kind: "quotation", path: "tests/clock.test.ts", signals: ["expect"], claimScope: "tested" }).success).toBe(true);
+    expect(assess({ ...claim, target: { kind: "quotation", path: "src/auth.ts", signals: ["auth"], claimScope: "tested" } }, [observation("runtime", "auth()")]).status).not.toBe("supported");
+  });
+
   it("requires every signal in one observation from the requested path", () => {
     const assess = claimAssessorRegistry.exact_source_quotation!;
     const together = assess(claim, [observation("one", 'const auth = configure("provider");')]);
