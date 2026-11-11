@@ -19,6 +19,37 @@ source (`src/cli.ts`, `package.json`, `bridges/`).
 
 ## 1. Prerequisites
 
+### Source evidence and test evidence
+
+For known upstream APIs, name the exact source paths in quotation facts and add
+the repository as a seed. A seed supplies a candidate to inspect; it does not
+make a global search repository-scoped or establish support on its own. Avoid
+generic signals such as `controller` when the actual API name is available.
+
+Large source files retain multiple contiguous evidence windows. Each window has
+its own observation id, original line range, revision, and content hash. Facts
+from distant regions remain available independently; the collector never joins
+those regions into invented adjacent code. Large-file hit collection is bounded
+to 25 occurrences per signal, so support beyond that bound can remain unresolved.
+
+Use `claimScope: "tested"` for a quotation from a specific test-source file:
+
+```json
+{
+  "kind": "quotation",
+  "path": "packages/core/test/clock.test.ts",
+  "signals": ["clock.increment", "toEqual"],
+  "claimScope": "tested"
+}
+```
+
+This scope requires an exact path, not a glob. It establishes only that published
+test code contains the assertion. It does **not** establish that the test ran or
+passed. Test files, including colocated `.test` and `.spec` files, cannot satisfy
+`implemented` scope; runtime claims still need implementation source and suitable
+execution evidence. Do not relabel test files as `advertised` just to pass a
+runtime implementation question.
+
 | Requirement | Version | Notes |
 | --- | --- | --- |
 | **Node.js** | **24.x** | Current validation runtime; ESM project (`"type": "module"`), NodeNext resolution. |

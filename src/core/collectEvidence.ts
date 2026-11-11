@@ -207,7 +207,8 @@ export async function collectEvidence(
       if (req.key === "behavior_proof" && isManifest) continue;
 
       const signals = isDocs && !isResearchProof ? [...req.signals, ...spec.requiredConcepts] : req.signals;
-      const hits = findSignalHits(lines, signals, file.startLine ?? 1).filter(
+      const hitLimit = content.length > (isManifest ? 16_384 : 8_192) ? 25 : 1;
+      const hits = findSignalHits(lines, signals, file.startLine ?? 1, hitLimit).filter(
         (hit) => req.key !== "existence_proof" || candidateRepresentsSignal(candidate, hit.signal),
       );
       if (hits.length === 0) continue;
@@ -239,7 +240,13 @@ export async function collectEvidence(
         sourceObservation.anchor = anchors[anchors.length - 1];
       }
     }
-    compactLargeObservation(sourceObservation, anchors, lines, file.startLine ?? 1, isManifest);
+    const compacted = compactLargeObservation(sourceObservation, anchors, lines, file.startLine ?? 1, isManifest);
+    // One source read may establish several independent facts. Keep each
+    // contiguous region as its own observation; never join unrelated lines.
+    Object.assign(sourceObservation, compacted[0]);
+    for (const window of compacted.slice(1)) {
+      observations.push({ ...window, id: `obs_${candidate.owner}_${candidate.name}_${observations.length + 1}` });
+    }
   }
 
   return { anchors: dedupeAnchors(anchors), observations, warnings, readPlan: pathsToRead, untouched };
@@ -289,9 +296,9 @@ function compactLargeObservation(
   lines: string[],
   firstLine: number,
   isManifest: boolean,
-): void {
+): SourceObservation[] {
   const text = source.excerpt;
-  if (text === undefined || text.length <= 8_192 || (isManifest && text.length <= 16_384)) return;
+  if (text === undefined || text.length <= 8_192 || (isManifest && text.length <= 16_384)) return [source];
   const relevantAnchors = anchors.filter((anchor) => anchor.repo === source.repo && anchor.path === source.path);
   if (relevantAnchors.length === 0) {
     delete source.excerpt;
@@ -299,23 +306,27 @@ function compactLargeObservation(
     delete source.startLine;
     delete source.endLine;
     delete source.anchor;
-    return;
+    return [source];
   }
-  const lineNumbers = relevantAnchors.map((anchor) => anchor.startLine ?? firstLine);
-  const firstHit = Math.min(...lineNumbers);
-  const lastHit = Math.max(...lineNumbers);
-  const excerptStart = Math.max(firstLine, firstHit - 2);
-  const excerptEnd = Math.min(firstLine + lines.length - 1, (lastHit - firstHit <= 80 ? lastHit : firstHit) + 2);
-  source.excerpt = lines.slice(excerptStart - firstLine, excerptEnd - firstLine + 1).join("\n");
-  source.contentHash = createHash("sha256").update(source.excerpt).digest("hex");
-  source.startLine = excerptStart;
-  source.endLine = excerptEnd;
-  const retained = relevantAnchors.filter((anchor) => anchor.startLine !== undefined && anchor.startLine >= excerptStart && anchor.startLine <= excerptEnd);
-  for (let index = anchors.length - 1; index >= 0; index -= 1) {
-    const anchor = anchors[index]!;
-    if (anchor.repo === source.repo && anchor.path === source.path && !retained.includes(anchor)) anchors.splice(index, 1);
+  const windows: { start: number; end: number }[] = [];
+  const lineNumbers = [...new Set(relevantAnchors.map((anchor) => anchor.startLine ?? firstLine))].sort((a, b) => a - b);
+  for (const line of lineNumbers) {
+    // Preserve nearby signals together while bounding dense regions. Separate
+    // windows retain their original line numbers and revision provenance.
+    const start = Math.max(firstLine, line - 12);
+    const end = Math.min(firstLine + lines.length - 1, line + 12);
+    const previous = windows.at(-1);
+    if (previous && start <= previous.end + 1 && end - previous.start <= 80) previous.end = Math.max(previous.end, end);
+    else windows.push({ start, end });
   }
-  source.anchor = retained.at(-1);
+  return windows.map(({ start, end }) => {
+    const excerpt = lines.slice(start - firstLine, end - firstLine + 1).join("\n");
+    return {
+      ...source, excerpt, startLine: start, endLine: end,
+      contentHash: createHash("sha256").update(excerpt).digest("hex"),
+      anchor: relevantAnchors.find((anchor) => anchor.startLine !== undefined && anchor.startLine >= start && anchor.startLine <= end),
+    };
+  });
 }
 
 function inferredReadStatus(file: Awaited<ReturnType<EvidenceProvider["getFile"]>>): SourceObservation["readStatus"] {
@@ -365,15 +376,19 @@ interface SignalHit {
   signal: string;
 }
 
-function findSignalHits(lines: string[], signals: string[], firstLine = 1): SignalHit[] {
+function findSignalHits(lines: string[], signals: string[], firstLine = 1, hitLimit = 1): SignalHit[] {
   const hits: SignalHit[] = [];
   const seen = new Set<string>();
   for (const signal of signals) {
     const normalized = signal.trim().toLowerCase();
     if (!normalized || seen.has(normalized)) continue;
     seen.add(normalized);
-    const idx = lines.findIndex((line) => lineHasSignal(line, signal));
-    if (idx >= 0) hits.push({ line: firstLine + idx, text: lines[idx]!.trim(), signal });
+    let found = 0;
+    for (let idx = 0; idx < lines.length && found < hitLimit; idx += 1) {
+      if (!lineHasSignal(lines[idx]!, signal)) continue;
+      hits.push({ line: firstLine + idx, text: lines[idx]!.trim(), signal });
+      found += 1;
+    }
   }
   return hits;
 }

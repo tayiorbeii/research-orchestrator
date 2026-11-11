@@ -6,8 +6,12 @@ export const BriefFactSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("dependency"), packageName: z.string().min(1), constraint: z.string().optional(), file: z.string().optional() }).strict(),
   z.object({ kind: z.literal("config"), keyPath: z.string().min(1), value: z.unknown().optional(), file: z.string().optional() }).strict(),
   z.object({ kind: z.literal("workflow"), command: z.string().min(1), file: z.string().optional() }).strict(),
-  z.object({ kind: z.literal("quotation"), path: z.string().optional(), signals: z.array(z.string().min(1)).min(1), claimScope: z.enum(["advertised", "proposed", "implemented"]).optional() }).strict(),
-]);
+  z.object({ kind: z.literal("quotation"), path: z.string().optional(), signals: z.array(z.string().min(1)).min(1), claimScope: z.enum(["advertised", "proposed", "implemented", "tested"]).optional() }).strict(),
+]).superRefine((fact, context) => {
+  if (fact.kind === "quotation" && fact.claimScope === "tested" && (!fact.path?.trim() || /[*?]/.test(fact.path))) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["path"], message: "Tested quotations require an exact test-source path." });
+  }
+});
 export type BriefFact = z.infer<typeof BriefFactSchema>;
 
 export const BriefObligationSchema = z.object({
