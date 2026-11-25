@@ -273,7 +273,11 @@ export async function collectEvidence(
         sourceObservation.anchor = anchors[anchors.length - 1];
       }
     }
-    compactLargeObservation(sourceObservation, anchors, lines, file.startLine ?? 1, isManifest);
+    // One read can establish facts for several questions. Each hit cluster stays
+    // its own observation (original line numbers, own hash); the densest leads.
+    const windows = compactLargeObservation(sourceObservation, anchors, lines, file.startLine ?? 1, isManifest);
+    Object.assign(sourceObservation, windows[0]);
+    for (const window of windows.slice(1)) observations.push({ ...window, id: `obs_${candidate.owner}_${candidate.name}_${nextSequence()}` });
   }
 
   return { anchors: dedupeAnchors(anchors), observations, warnings, readPlan: pathsToRead, untouched };
@@ -317,17 +321,23 @@ function resolveRelativePath(sourcePath: string, target: string): string | undef
   return normalized.join("/") || undefined;
 }
 
-/** Whole files up to this size are kept; larger ones are cut to the best hit cluster. */
+/** Whole files up to this size are kept; larger ones are cut to their hit clusters. */
 const WHOLE_FILE_EXCERPT_BYTES = 8_192;
 const WHOLE_MANIFEST_EXCERPT_BYTES = 16_384;
+/** A cluster stops growing here so a dense file cannot return itself whole. */
+const MAX_CLUSTER_LINES = 80;
+/** Most windows one file may keep; the densest clusters win the slots. */
+const MAX_WINDOWS_PER_FILE = 6;
 
 /**
  * Cut a large file down to the lines an assessor can use. Every hit gets a
- * window as wide as the quotation policy's co-occurrence window, overlapping
- * windows merge into clusters, and the cluster that states the most distinct
- * signals is kept. The old ±2-line window around the first hit made a
- * two-signal fact unprovable whenever the file was large and the first
- * mention was a decoy.
+ * window as wide as the quotation policy's co-occurrence window and touching
+ * windows merge into clusters. Each cluster becomes its own observation, so
+ * questions that share a file do not starve each other; the cluster stating
+ * the most distinct signals comes first (it keeps the original observation's
+ * slot), the rest follow in file order. Windows are never joined: a window
+ * is an exact slice with its own line range and hash, so unrelated regions
+ * cannot combine into code the file does not contain.
  */
 function compactLargeObservation(
   source: SourceObservation,
@@ -335,9 +345,9 @@ function compactLargeObservation(
   lines: string[],
   firstLine: number,
   isManifest: boolean,
-): void {
+): SourceObservation[] {
   const text = source.excerpt;
-  if (text === undefined || text.length <= WHOLE_FILE_EXCERPT_BYTES || (isManifest && text.length <= WHOLE_MANIFEST_EXCERPT_BYTES)) return;
+  if (text === undefined || text.length <= WHOLE_FILE_EXCERPT_BYTES || (isManifest && text.length <= WHOLE_MANIFEST_EXCERPT_BYTES)) return [source];
   const relevantAnchors = anchors.filter((anchor) => anchor.repo === source.repo && anchor.path === source.path);
   if (relevantAnchors.length === 0) {
     delete source.excerpt;
@@ -345,7 +355,7 @@ function compactLargeObservation(
     delete source.startLine;
     delete source.endLine;
     delete source.anchor;
-    return;
+    return [source];
   }
   const lastLine = firstLine + lines.length - 1;
   const window = QUOTATION_SIGNAL_WINDOW_LINES;
@@ -357,26 +367,31 @@ function compactLargeObservation(
     const start = Math.max(firstLine, hit.line - window);
     const end = Math.min(lastLine, hit.line + window);
     const last = clusters.at(-1);
-    if (last && start <= last.end + 1) {
+    if (last && start <= last.end + 1 && end - last.start <= MAX_CLUSTER_LINES) {
       last.end = Math.max(last.end, end);
       last.signals.add(hit.signal);
       last.hits += 1;
     } else clusters.push({ start, end, signals: new Set([hit.signal]), hits: 1 });
   }
-  const best = clusters.reduce((chosen, cluster) =>
-    cluster.signals.size > chosen.signals.size || (cluster.signals.size === chosen.signals.size && cluster.hits > chosen.hits) ? cluster : chosen);
-  const excerptStart = best.start;
-  const excerptEnd = best.end;
-  source.excerpt = lines.slice(excerptStart - firstLine, excerptEnd - firstLine + 1).join("\n");
-  source.contentHash = createHash("sha256").update(source.excerpt).digest("hex");
-  source.startLine = excerptStart;
-  source.endLine = excerptEnd;
-  const retained = relevantAnchors.filter((anchor) => anchor.startLine !== undefined && anchor.startLine >= excerptStart && anchor.startLine <= excerptEnd);
+  const ranked = [...clusters].sort((left, right) =>
+    right.signals.size - left.signals.size || right.hits - left.hits || left.start - right.start).slice(0, MAX_WINDOWS_PER_FILE);
+  const kept = [ranked[0]!, ...ranked.slice(1).sort((left, right) => left.start - right.start)];
+  const retainedAnchors = new Set<EvidenceAnchor>();
+  const windows = kept.map(({ start, end }) => {
+    const excerpt = lines.slice(start - firstLine, end - firstLine + 1).join("\n");
+    const inside = relevantAnchors.filter((anchor) => anchor.startLine !== undefined && anchor.startLine >= start && anchor.startLine <= end);
+    for (const anchor of inside) retainedAnchors.add(anchor);
+    return {
+      ...source, excerpt, startLine: start, endLine: end,
+      contentHash: createHash("sha256").update(excerpt).digest("hex"),
+      anchor: inside.at(-1),
+    };
+  });
   for (let index = anchors.length - 1; index >= 0; index -= 1) {
     const anchor = anchors[index]!;
-    if (anchor.repo === source.repo && anchor.path === source.path && !retained.includes(anchor)) anchors.splice(index, 1);
+    if (anchor.repo === source.repo && anchor.path === source.path && !retainedAnchors.has(anchor)) anchors.splice(index, 1);
   }
-  source.anchor = retained.at(-1);
+  return windows;
 }
 
 function inferredReadStatus(file: Awaited<ReturnType<EvidenceProvider["getFile"]>>): SourceObservation["readStatus"] {

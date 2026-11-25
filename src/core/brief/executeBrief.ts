@@ -207,7 +207,10 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
   }
   for (const seed of brief.seeds) {
     if (!associations.has(seed.repo)) associations.set(seed.repo, new Set());
-    if (!paths.has(seed.repo)) paths.set(seed.repo, new Set(expectedPaths(brief)));
+    // A seed is read where the facts (or the seed itself) say, whether or not
+    // a search hit also found it: a hit shows a mention, not the declaring file.
+    const repoPaths = paths.get(seed.repo) ?? (paths.set(seed.repo, new Set()), paths.get(seed.repo)!);
+    for (const path of seed.paths ?? expectedPaths(brief)) repoPaths.add(path);
   }
   const probeQuestions = new Map([...historyProbes, ...scheduled].map((probe) => [probe.id, probe.questionIds]));
   // A code-search hit shows where a term is mentioned, not where a fact is
@@ -460,12 +463,25 @@ function declarationPaths(question: ResearchBrief["questions"][number]): string[
   return [...new Set(paths)];
 }
 
-/** A seed is opened only at the paths its facts name; a pathless quotation leaves it at README.md. */
+/**
+ * A seed without `paths` is opened at every path the facts name. Warn when that
+ * leaves it at README.md (a pathless quotation) or tries one repository's file
+ * on several repositories (several seeds, several fact paths).
+ */
 function seedPathWarnings(brief: ResearchBrief): string[] {
+  const unscoped = brief.seeds.filter((seed) => !seed.paths);
   const pathless = brief.questions.filter((question) => question.obligations.some((obligation) =>
     obligation.facts.some((fact) => fact.kind === "quotation" && !fact.path)));
-  return brief.seeds.flatMap((seed) => pathless.map((question) =>
-    `Seed ${seed.repo} is only read at README.md for question ${question.id}: its quotation fact names no path, so none of the seed's source files is opened unless a search hit points to one. Add "path" to the fact to read a specific file.`));
+  const warnings = unscoped.flatMap((seed) => pathless.map((question) =>
+    `Seed ${seed.repo} is only read at README.md for question ${question.id}: its quotation fact names no path, so none of the seed's source files is opened unless a search hit points to one. Add "path" to the fact, or "paths" to the seed, to read a specific file.`));
+  const factPaths = [...new Set(brief.questions.flatMap((question) => question.obligations.flatMap((obligation) => obligation.facts.flatMap((fact) => {
+    const named = fact.kind === "quotation" ? fact.path : fact.kind === "dependency" ? undefined : fact.file;
+    return named ? [named] : [];
+  }))))];
+  if (unscoped.length > 1 && factPaths.length > 1) {
+    warnings.push(`Fact paths are tried on every seed repository (${factPaths.join(", ")}): ${unscoped.map((seed) => seed.repo).join(", ")} each get all of them, so a path meant for one repository 404s on the others. Give each seed "paths" to read it at its own files.`);
+  }
+  return warnings;
 }
 
 function expectedPaths(brief: ResearchBrief): string[] {

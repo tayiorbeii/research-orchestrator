@@ -138,10 +138,22 @@ When the request has `questions`, search vocabulary comes from each question's
 obligation facts (quotation signals, dependency packages, config keys, workflow
 commands), structural tokens such as `BackOffHTTPClient` first; goal words are
 only the fallback. A bland goal is `ready` if the facts name a distinctive
-token. A seed repository is opened only at the paths its facts name (`path`,
-`file`, or the manifest default), so a quotation fact on a seeded repo needs a
-`path` to read a source file; otherwise the run warns that the seed is only read
-at `README.md`.
+token. A seed repository is opened at the paths its facts name (`path`,
+`file`, or the manifest default), even when a search hit also found it, so a
+quotation fact on a seeded repo needs a `path` to read a source file; otherwise
+the run warns that the seed is only read at `README.md`.
+
+Fact paths apply to every seed. With several seeds, give each its own
+`"paths": [...]` (`{"repo": "burnash/gspread", "origin": "user_supplied",
+"paths": ["gspread/worksheet.py"]}`): that seed is read at those files only, so
+one repository's path is not tried (and 404'd) on the others. Without `paths`
+and with two or more fact paths, the run warns that every seed gets all of them.
+
+A source file larger than 8 KB is kept as its hit clusters, not whole. Each
+cluster (hits within 12 lines of each other, at most 80 lines, at most six per
+file, the densest first) is its own observation with its original line range and
+hash, so questions that share a file do not displace each other. Windows are
+never joined: a fact whose signals sit in different windows stays unproven.
 
 For an abstract goal,
 the host can perform approved lookups and submit acquired terms plus successful

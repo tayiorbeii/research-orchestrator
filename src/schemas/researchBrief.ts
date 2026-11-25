@@ -44,7 +44,12 @@ export const VocabularyTermSchema = z.object({
 export type VocabularyTerm = z.infer<typeof VocabularyTermSchema>;
 
 export const BriefMechanismSchema = z.object({ id: z.string().min(1), description: z.string().min(1), questionIds: z.array(z.string().min(1)) }).strict();
-export const BriefSeedSchema = z.object({ repo: z.string().min(1), origin: z.enum(["user_supplied", "local_artifact_derived", "remote_source_derived", "planner_hypothesis"]) }).strict();
+/** `paths` lists the files this seed is read at; without it the seed is read at every fact's path. */
+export const BriefSeedSchema = z.object({
+  repo: z.string().min(1),
+  origin: z.enum(["user_supplied", "local_artifact_derived", "remote_source_derived", "planner_hypothesis"]),
+  paths: z.array(z.string().min(1)).min(1).optional(),
+}).strict();
 export const LookupOutcomeSchema = z.object({
   questionId: z.string().min(1),
   sourceRef: z.string().min(1),

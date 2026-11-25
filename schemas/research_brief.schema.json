@@ -14,7 +14,7 @@
     "versions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
     "mechanisms": { "type": "array", "items": { "type": "object", "required": ["id", "description", "questionIds"], "properties": { "id": { "type": "string", "minLength": 1 }, "description": { "type": "string", "minLength": 1 }, "questionIds": { "type": "array", "items": { "type": "string", "minLength": 1 } } }, "additionalProperties": false } },
     "vocabulary": { "type": "array", "items": { "$ref": "vocabulary_term.schema.json" } },
-    "seeds": { "type": "array", "items": { "type": "object", "required": ["repo", "origin"], "properties": { "repo": { "type": "string", "minLength": 1 }, "origin": { "enum": ["user_supplied", "local_artifact_derived", "remote_source_derived", "planner_hypothesis"] } }, "additionalProperties": false } },
+    "seeds": { "type": "array", "items": { "type": "object", "required": ["repo", "origin"], "properties": { "repo": { "type": "string", "minLength": 1 }, "origin": { "enum": ["user_supplied", "local_artifact_derived", "remote_source_derived", "planner_hypothesis"] }, "paths": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } } }, "additionalProperties": false } },
     "allowedSourceKinds": { "type": "array", "minItems": 1, "items": { "enum": ["repository_file", "repository_metadata", "documentation_page", "issue_proposal", "local_artifact", "synthetic_fixture"] } },
     "budgets": { "$ref": "#/$defs/budgets" },
     "readiness": { "oneOf": [
