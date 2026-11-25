@@ -1,6 +1,6 @@
 import { DEFAULT_BRIEF_BUDGETS, ResearchBriefSchema, type ResearchBrief, type VocabularyTerm } from "../../schemas/researchBrief.js";
 import { extractKeyTerms } from "../knowledge.js";
-import { anchoredProbeTerms, isDistinctiveVocabularyTerm } from "./probeTerms.js";
+import { anchoredProbeTerms, hasStructuralSignal, isDistinctiveAnchor, isDistinctiveVocabularyTerm } from "./probeTerms.js";
 
 const TASK_WORDS = new Set([
   "find", "proven", "prove", "repository", "repositories", "implementations", "implementation", "examples", "example",
@@ -34,6 +34,7 @@ export function draftBriefFromGoal(goal: string, hints?: Partial<ResearchBrief>)
   }));
 
   const vocabulary: VocabularyTerm[] = hints?.vocabulary?.map((term) => ({ ...term })) ?? [];
+  let factsNameAnchor = false;
   const existing = new Set(vocabulary.map((term) => `${term.text.toLowerCase()}|${term.questionIds.join(",")}`));
   for (let index = 0; index < sourceQuestions.length; index += 1) {
     const question = sourceQuestions[index]!;
@@ -43,6 +44,7 @@ export function draftBriefFromGoal(goal: string, hints?: Partial<ResearchBrief>)
     // goal-derived groups onto explicit questions by position searched for
     // generic words ("sign-in") instead of the facts the caller supplied.
     const factTerms = hints?.questions?.length ? termsFromFacts(question) : [];
+    if (factTerms.some(([text, kind]) => kind === "package" || (!TASK_WORDS.has(text.trim().toLowerCase()) && isDistinctiveAnchor(text)))) factsNameAnchor = true;
     const group: Array<[string, VocabularyTerm["kind"]]> = factTerms.length
       ? factTerms
       : (groups[index] ?? uniqueTerms).map((text) => [text, inferKind(text)]);
@@ -54,7 +56,7 @@ export function draftBriefFromGoal(goal: string, hints?: Partial<ResearchBrief>)
     }
   }
 
-  const noVocabulary = !groups.some((group) => group.length > 0) && !(hints?.vocabulary?.some((term) => isDistinctiveVocabularyTerm(term) &&
+  const noVocabulary = !groups.some((group) => group.length > 0) && !factsNameAnchor && !(hints?.vocabulary?.some((term) => isDistinctiveVocabularyTerm(term) &&
     (term.egress !== "restricted" || hints?.egressPolicy?.allowRestrictedLocalTerms === true)));
   const tooMany = sourceQuestions.filter((question) => question.required).length > 6;
   const readiness: ResearchBrief["readiness"] = noVocabulary || tooMany
@@ -113,7 +115,10 @@ function termsFromFacts(question: ResearchBrief["questions"][number]): Array<[st
     }
   }
   const seen = new Set<string>();
-  return terms.filter(([text]) => { const key = text.trim().toLowerCase(); if (!key || seen.has(key)) return false; seen.add(key); return true; });
+  const unique = terms.filter(([text]) => { const key = text.trim().toLowerCase(); if (!key || seen.has(key)) return false; seen.add(key); return true; });
+  // The first term of a question is its guaranteed probe, so a structural token
+  // (`HttpError`, `num_retries`) must not queue behind a plain word (`retry`).
+  return [...unique.filter(([text]) => hasStructuralSignal(text)), ...unique.filter(([text]) => !hasStructuralSignal(text))];
 }
 
 function inferKind(term: string): VocabularyTerm["kind"] {

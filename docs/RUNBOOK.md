@@ -132,7 +132,18 @@ include issue codes. No provider calls occur for a `needs_input` brief.
 The request JSON contains a `goal` and may include structured questions,
 vocabulary, seeds, source policy, and budgets. `plan` writes the brief to
 `--out` and prints readiness plus question-scoped lookup needs. It does not
-imply that web research or vocabulary lookups happened. For an abstract goal,
+imply that web research or vocabulary lookups happened.
+
+When the request has `questions`, search vocabulary comes from each question's
+obligation facts (quotation signals, dependency packages, config keys, workflow
+commands), structural tokens such as `BackOffHTTPClient` first; goal words are
+only the fallback. A bland goal is `ready` if the facts name a distinctive
+token. A seed repository is opened only at the paths its facts name (`path`,
+`file`, or the manifest default), so a quotation fact on a seeded repo needs a
+`path` to read a source file; otherwise the run warns that the seed is only read
+at `README.md`.
+
+For an abstract goal,
 the host can perform approved lookups and submit acquired terms plus successful
 and failed lookup receipts as a new brief revision:
 

@@ -98,6 +98,7 @@ export async function executeBrief(input: ResearchBrief, deps: ExecuteBriefDeps)
   const outcomes: ProbeOutcome[] = [...(previous?.probeOutcomes ?? [])];
   const results: NormalizedSearchResult[] = [];
   const warnings = compiled.failures.map((failure) => `Probe ${failure.questionId} could not compile: ${failure.reason}`);
+  warnings.push(...seedPathWarnings(brief));
 
   const attemptProbe = async (probe: SearchProbeV2): Promise<void> => {
     const started = Date.now();
@@ -457,6 +458,14 @@ function declarationPaths(question: ResearchBrief["questions"][number]): string[
     return [];
   }));
   return [...new Set(paths)];
+}
+
+/** A seed is opened only at the paths its facts name; a pathless quotation leaves it at README.md. */
+function seedPathWarnings(brief: ResearchBrief): string[] {
+  const pathless = brief.questions.filter((question) => question.obligations.some((obligation) =>
+    obligation.facts.some((fact) => fact.kind === "quotation" && !fact.path)));
+  return brief.seeds.flatMap((seed) => pathless.map((question) =>
+    `Seed ${seed.repo} is only read at README.md for question ${question.id}: its quotation fact names no path, so none of the seed's source files is opened unless a search hit points to one. Add "path" to the fact to read a specific file.`));
 }
 
 function expectedPaths(brief: ResearchBrief): string[] {

@@ -28,7 +28,7 @@ export function isDistinctiveAnchor(value: string): boolean {
   return hasStructuralSignal(term) || !NON_ANCHOR_TERMS.has(term.toLowerCase());
 }
 
-function hasStructuralSignal(term: string): boolean {
+export function hasStructuralSignal(term: string): boolean {
   return /^--[\w-]+$/.test(term) || /^@[\w.-]+\/[\w./-]+$/.test(term) ||
     /[/.]|::/.test(term) || /[A-Z]/.test(term.slice(1)) || /[0-9]/.test(term);
 }
